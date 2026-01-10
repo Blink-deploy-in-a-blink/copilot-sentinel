@@ -126,15 +126,17 @@ Records completed step in state. Only works after `verify` passes.
 Syncs external_state.json from other repos. This is the ONLY way to populate external_state.json.
 
 ```bash
-# From your current repo, sync state from sibling repos
-wrapper sync-external --from ../ui --from ../llm
+# Sync from one or more sibling repos
+wrapper sync-external --from ../ui --from ../api --from ../llm
 ```
 
-Extracts from each repo's `.wrapper/state.json`:
-- `done_steps` summaries
-- `invariants`
+**What it does:**
+- Reads `.wrapper/state.json` from each specified repo
+- Extracts `done_steps` summaries and `invariants`
+- Aggregates ALL repos into a single `external_state.json` file
+- Does NOT scan source code or infer anything
 
-Does NOT scan source code or infer anything.
+**Use case:** If your repo depends on other repos (declared in `repo.yaml`), sync their state so the LLM knows what's been completed in those repos. The tool will block feature work if dependencies aren't baseline verified.
 
 ## File Structure
 
@@ -216,21 +218,55 @@ success_criteria:
 
 ## Multi-Repo Usage
 
-Each repo has its own `.wrapper/` directory.
+Each repo has its own `.wrapper/` directory and operates independently.
 
-Use `external_state.json` to share awareness:
+### Sharing State Between Repos
 
-```json
-{
-  "ui": {
-    "status": "baseline_verified",
-    "known_endpoints": ["POST /jobs", "GET /jobs/:id"]
-  },
-  "llm": {
-    "status": "baseline_verified",
-    "models": ["deepseek-chat"]
-  }
-}
+When you have multiple repos that depend on each other, use `sync-external` to share state:
+
+1. **In each dependency repo**, run `wrapper init` and complete baseline verification
+2. **In your current repo**, sync their state:
+   ```bash
+   wrapper sync-external --from ../ui --from ../api --from ../llm
+   ```
+
+3. This creates `.wrapper/external_state.json` with aggregated info:
+   ```json
+   {
+     "ui": {
+       "done_steps": ["baseline-verification: verification completed"],
+       "invariants": ["All components are TypeScript", "Redux for state management"]
+     },
+     "api": {
+       "done_steps": ["baseline-verification: verification completed"],
+       "invariants": ["RESTful endpoints only", "JWT authentication"]
+     },
+     "llm": {
+       "done_steps": ["baseline-verification: verification completed"],
+       "invariants": ["DeepSeek client configured"]
+     }
+   }
+   ```
+
+4. **The LLM uses this** when proposing steps:
+   - Checks if dependencies are baseline verified
+   - Blocks feature work until dependencies are clean
+   - Prevents cross-repo coupling issues
+
+### Example Workflow
+
+```bash
+# In repo A (ui)
+cd ../ui
+wrapper init
+wrapper propose  # Creates baseline verification step
+# ... verify and accept ...
+
+# In repo B (api) - depends on ui
+cd ../api
+wrapper init
+wrapper sync-external --from ../ui  # Get ui's state
+wrapper propose  # LLM sees ui is verified, proposes appropriate step
 ```
 
 ## Philosophy
