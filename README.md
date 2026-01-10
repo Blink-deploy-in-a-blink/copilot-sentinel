@@ -89,6 +89,8 @@ Creates `.wrapper/` directory with template files:
 - `repo.yaml` - Repository constraints
 - `config.yaml` - LLM configuration
 
+**Note:** All files are created with detailed templates and examples. The templates show the expected format and structure for each file.
+
 ### `wrapper propose`
 
 Uses LLM to propose the next `step.yaml` based on:
