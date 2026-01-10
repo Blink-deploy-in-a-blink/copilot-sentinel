@@ -1,0 +1,4 @@
+# wrapper - minimal dependencies
+# Only PyYAML is required (standard library handles the rest)
+
+PyYAML>=6.0
