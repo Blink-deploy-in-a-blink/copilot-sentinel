@@ -15,7 +15,7 @@ A strict, boring CLI tool that enforces architectural discipline when using GitH
 
 ```bash
 # Clone the repository
-git clone https://github.com/YOUR-ORG/copilot-sentinel.git
+git clone https://github.com/Blink-deploy-in-a-blink/copilot-sentinel.git
 cd copilot-sentinel
 
 # Install dependencies
