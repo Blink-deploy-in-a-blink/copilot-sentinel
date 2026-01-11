@@ -1,40 +1,42 @@
-# Copilot Sentinel
+# wrapper
 
 **AI-assisted development with architectural guardrails.**
 
-Enforces discipline when using GitHub Copilot, Claude Code, Cursor, or any AI coding assistant. Proposes steps, verifies changes, tracks deviations, and blocks cross-repo work until dependencies are ready.
+A strict, boring CLI tool that enforces discipline when using GitHub Copilot, Claude, Cursor, or any AI coding assistant.
+
+-  **Baseline Capture** - Auto-scans your repo, finds architecture violations
+-  **Step-by-Step Fixes** - LLM proposes next step to resolve deviations  
+-  **Strict Verification** - Checks git diff + AI output against constraints
+-  **Cross-Repo Blocking** - Prevents work if dependencies have unresolved issues
+-  **Auto-Resolution Tracking** - Knows which steps fix which deviations
+
+---
 
 ## Quick Start
 
 ```bash
-# Clone and install
+# Install
 git clone https://github.com/Blink-deploy-in-a-blink/copilot-sentinel.git
 cd copilot-sentinel
-pip install -r requirements.txt
 pip install -e .
 
-# In your project repo
-
+# In your project
+cd your-project
 wrapper init
 
-# Edit these files (ONE TIME):
-#   .wrapper/architecture.md  - Your target architecture
-#   .wrapper/repo.yaml        - Repository boundaries
+# Set API key (choose one)
+export DEEPSEEK_API_KEY="sk-..."      # Linux/Mac
+$env:DEEPSEEK_API_KEY="sk-..."        # Windows
 
-# Set API key
-export DEEPSEEK_API_KEY="your-key"  # Linux/Mac
-$env:DEEPSEEK_API_KEY="your-key"    # Windows
-
-# First step (always baseline verification)
-wrapper propose    # → generates step.yaml
-wrapper compile    # → generates copilot_prompt.txt
-
+# First run (captures baseline)
+wrapper propose
+wrapper compile
 # Give copilot_prompt.txt to AI, paste response in copilot_output.txt
-wrapper verify     # → auto-captures baseline, passes
-wrapper accept     # → step complete
+wrapper verify     # Auto-captures baseline, always passes first time
+wrapper accept
 
 # Repeat for each step
-wrapper propose    # → next step (fixes deviations)
+wrapper propose    # Next step (fixes deviations)
 wrapper compile
 # ... work with AI ...
 wrapper verify
@@ -43,115 +45,35 @@ wrapper accept
 
 ---
 
-## What It Does
+## What You Need to Configure (One Time)
 
-1. **Baseline Capture** - Scans repo, generates deviation list (automatic)
-2. **Step Proposals** - LLM proposes next step based on deviations + architecture
-3. **Strict Verification** - Checks git diff + AI output against constraints
-4. **Cross-Repo Blocking** - Prevents work if dependencies have unresolved issues
-5. **Auto-Resolution** - Tracks which steps fix which deviations
+After `wrapper init`, edit these files in `.wrapper/`:
 
----
+### `.wrapper/architecture.md`
+Your target architecture. Example:
 
-## Commands
+```markdown
+# Agent Architecture
 
-| Command | Purpose | When to Use |
-|---------|---------|-------------|
-| `wrapper init` | Create `.wrapper/` templates | Once per repo |
-| `wrapper propose` | Generate next step | After each accept |
-| `wrapper compile` | Create AI prompt | After propose/editing step |
-| `wrapper verify` | Check changes against rules | After AI makes changes |
-| `wrapper accept` | Record completed step | After verify passes |
-| `wrapper sync-external` | Sync dependency repo state | Before propose (multi-repo) |
-| `wrapper snapshot` | Manual baseline capture | Rarely (auto-done on first verify) |
-| `wrapper diff-baseline` | Show drift from baseline | Debugging |
+## Structure
+- Polling-based job execution
+- No inbound HTTP server
+- Communicate via message queue
 
----
+## Components
+- JobPoller: Checks for new jobs every 30s
+- Executor: Runs jobs in isolated containers
+- Reporter: Sends results back
 
-## Key Features
-
-### 🎯 Automatic Baseline
-First `wrapper verify`:
-- Scans entire repo (files, structure)
-- LLM compares architecture vs reality
-- Auto-generates `deviations.yaml` with mismatches
-- **Always passes** (just documenting current state)
-
-### 🔄 Step-by-Step Deviation Fixing
-```
-Baseline → 13 deviations found
-  ↓
-Step 1: Remove HTTP server (fixes 2 deviations)
-  ↓
-Step 2: Restructure directories (fixes 4 deviations)
-  ↓
-Step 3: Add polling mechanism (fixes 1 deviation)
-  ↓
-... continue until all resolved
+## Constraints
+- NO HTTP endpoints (security requirement)
+- NO direct database access (use API)
+- Jobs MUST timeout after 5 minutes
 ```
 
-### 🚨 Cross-Repo Dependency Blocking
-```bash
-# In Agent repo
-wrapper sync-external --from ../ui
+### `.wrapper/repo.yaml`
+Repository boundaries and dependencies. Example:
 
-wrapper propose
-# 🚨 BLOCKED: UI has unresolved deviation "no-polling-support"
-# → Proposes: "blocked-waiting-for-ui" step
-# → Output: "Fix UI repo first!"
-
-# After UI fixes deviation:
-wrapper sync-external --from ../ui
-wrapper propose
-# ✅ Can proceed (blocker resolved)
-```
-
-### 📋 Smart Deviation Resolution
-```bash
-wrapper accept
-# → LLM checks: "Does this step resolve any deviations?"
-# → Auto-updates deviations.yaml
-# → Unblocks dependent repos on next sync
-```
-
----
-
-## File Structure
-
-```
-your-repo/
-├── .wrapper/
-│   ├── architecture.md          # [MANUAL] Target architecture
-│   ├── repo.yaml                # [MANUAL] Boundaries & dependencies
-│   ├── config.yaml              # [MANUAL] API key
-│   │
-│   ├── step.yaml                # [Auto] Current step (review before compile)
-│   ├── copilot_prompt.txt       # [Auto] For AI assistant
-│   ├── copilot_output.txt       # [You] Paste AI response here
-│   │
-│   ├── state.json               # [Auto] All completed steps
-│   ├── baseline_snapshot.json   # [Auto] Repo structure at start
-│   ├── deviations.yaml          # [Auto] Architecture mismatches
-│   └── external_state.json      # [Auto] Dependency repo states
-```
-
----
-
-## Configuration
-
-**API Key (choose one):**
-```bash
-# Environment variable (recommended)
-export DEEPSEEK_API_KEY="your-key"
-
-# Or in .wrapper/config.yaml
-llm_provider: deepseek
-deepseek_api_key: your-key
-```
-
-**Supported LLMs:** DeepSeek (default), OpenAI, Anthropic
-
-**Repository Configuration (`.wrapper/repo.yaml`):**
 ```yaml
 repo_name: agent
 repo_role: |
@@ -167,29 +89,169 @@ depends_on:
     via: polling endpoints
 ```
 
+### `.wrapper/config.yaml`
+LLM provider (optional, defaults to DeepSeek):
+
+```yaml
+llm_provider: deepseek  # or 'openai' or 'anthropic'
+deepseek_api_key: sk-...  # or set via environment variable
+```
+
+That's it! Everything else is automatic.
+
 ---
 
-## Multi-Repo Workflow
+## How It Works
+
+### 1. Baseline Capture (Automatic)
+First `wrapper verify`:
+- Scans entire repo (files, directories, structure)
+- LLM compares actual code vs `architecture.md`
+- Generates `deviations.yaml` with all violations
+- **Always passes** (just documenting reality)
+
+Example output:
+```
+✅ PASS - Baseline captured
+Found 13 deviations from architecture
+```
+
+### 2. Step-by-Step Deviation Fixing
+```
+Step 1: Remove HTTP server code (fixes 2 deviations)
+  ↓ verify + accept
+Step 2: Add polling mechanism (fixes 1 deviation)
+  ↓ verify + accept
+Step 3: Restructure directories (fixes 4 deviations)
+  ↓ verify + accept
+... continue until clean
+```
+
+### 3. Cross-Repo Dependency Blocking
+```bash
+# In Agent repo (depends on UI)
+wrapper sync-external --from ../ui
+wrapper propose
+
+# If UI has unresolved deviations:
+❌ BLOCKED: ui has high-severity deviation "no-polling-endpoint"
+Proposed: "blocked-waiting-for-ui" step
+
+# After UI fixes it:
+wrapper sync-external --from ../ui
+wrapper propose
+✅ Can proceed with actual work
+```
+
+---
+
+## Commands
+
+| Command | What It Does |
+|---------|-------------|
+| `wrapper init` | Creates `.wrapper/` directory with templates |
+| `wrapper propose` | Generates next step based on deviations + architecture |
+| `wrapper compile` | Creates `copilot_prompt.txt` for AI assistant |
+| `wrapper verify` | Checks git diff + AI output against step constraints |
+| `wrapper accept` | Records completed step, auto-updates deviation resolutions |
+| `wrapper sync-external` | Syncs dependency repo states (multi-repo setups) |
+| `wrapper snapshot` | Manual baseline capture (rarely needed) |
+| `wrapper diff-baseline` | Shows drift from baseline (debugging) |
+| `wrapper --version` | Show version |
+
+---
+
+## Typical Workflow
 
 ```bash
-# Setup each repo
+# 1. Get next step
+wrapper propose
+# → Creates .wrapper/step.yaml
+
+# 2. Generate AI prompt
+wrapper compile
+# → Creates .wrapper/copilot_prompt.txt
+
+# 3. Give prompt to AI
+# Copy copilot_prompt.txt content
+# Paste into Copilot/Claude/Cursor
+# Paste AI's response into copilot_output.txt
+
+# 4. Verify changes
+wrapper verify
+# → Checks git diff + copilot_output.txt against step constraints
+
+# 5. Accept if passed
+wrapper accept
+# → Records step, auto-resolves matched deviations
+```
+
+---
+
+## Multi-Repo Setup
+
+When you have dependencies between repos:
+
+```bash
+# Setup each repo once
 cd ui && wrapper init && wrapper propose && wrapper verify && wrapper accept
 cd agent && wrapper init && wrapper propose && wrapper verify && wrapper accept
 
 # Before working on agent
 cd agent
-wrapper sync-external --from ../ui --from ../llm
-# → Checks ui & llm for blockers
+wrapper sync-external --from ../ui --from ../auth
 
 wrapper propose
-# → If ui has blocker: proposes "blocked" step
-# → If clean: proposes actual work
+# → Checks for blockers in ui & auth
+# → Proposes "blocked" step if dependencies broken
+# → Proposes real work if clean
 
-# After ui fixes its blocker
-cd agent
+# After dependency repo fixes issues
 wrapper sync-external --from ../ui
 wrapper propose
-# → Now unblocked, can proceed
+# → Now unblocked
+```
+
+---
+
+## File Structure
+
+```
+your-repo/
+├── .wrapper/
+│   ├── architecture.md          # [YOU EDIT] Target architecture
+│   ├── repo.yaml                # [YOU EDIT] Boundaries & dependencies
+│   ├── config.yaml              # [YOU EDIT] API key (optional)
+│   │
+│   ├── step.yaml                # [AUTO] Current step
+│   ├── copilot_prompt.txt       # [AUTO] For AI assistant
+│   ├── copilot_output.txt       # [YOU] Paste AI response here
+│   │
+│   ├── state.json               # [AUTO] Completed steps history
+│   ├── baseline_snapshot.json   # [AUTO] Repo structure snapshot
+│   ├── deviations.yaml          # [AUTO] Architecture violations
+│   └── external_state.json      # [AUTO] Dependency repo states
+```
+
+---
+
+## Supported LLMs
+
+- **DeepSeek** (default) - Fast, cheap, good results
+- **OpenAI** - GPT-4 / GPT-3.5
+- **Anthropic** - Claude
+
+Set via environment variable or `.wrapper/config.yaml`:
+
+```bash
+# DeepSeek (default)
+export DEEPSEEK_API_KEY="sk-..."
+
+# OpenAI
+export OPENAI_API_KEY="sk-..."
+
+# Anthropic
+export ANTHROPIC_API_KEY="sk-..."
 ```
 
 ---
@@ -197,20 +259,51 @@ wrapper propose
 ## Troubleshooting
 
 **"No LLM API key configured"**
-- Set `DEEPSEEK_API_KEY` environment variable or add to `.wrapper/config.yaml`
+```bash
+export DEEPSEEK_API_KEY="your-key"
+```
 
 **"Not in a git repository"**
-- Run `git init` first
+```bash
+git init
+```
 
 **"Verification step requires Copilot output"**
 - Paste AI's analysis into `.wrapper/copilot_output.txt`
 
-**"ACCEPT BLOCKED"**
-- Run `wrapper verify` and get PASS first
+**"ACCEPT BLOCKED - must PASS verify first"**
+- Run `wrapper verify` until it passes
 
-**Check drift from baseline:**
+**Check what changed since baseline:**
 ```bash
 wrapper diff-baseline
+```
+
+---
+
+## Example: Real Baseline Capture
+
+```bash
+$ wrapper propose
+Analyzing repository...
+
+$ wrapper verify
+✅ PASS - Baseline captured
+
+Deviations found (13 total):
+  [HIGH] http-server-present: Flask server in main.py (violates no-http-server)
+  [HIGH] direct-db-access: SQLAlchemy in models.py (violates no-direct-db)
+  [MED] missing-polling: No polling mechanism found
+  [MED] no-timeout: Job execution has no timeout
+  ... 9 more
+
+$ wrapper propose
+Analyzing deviations...
+
+Proposed Step:
+  Title: Remove Flask HTTP server
+  Goal: Eliminate HTTP server code, violates architecture
+  Fixes: [http-server-present, unused-routes]
 ```
 
 ---
@@ -221,18 +314,19 @@ wrapper diff-baseline
 
 - AI is powerful but implicit
 - This tool makes constraints explicit
-- Captures reality, not just ideals  
-- Verifies changes against architecture AND baseline
+- Captures reality (baseline), not just ideals  
+- Verifies changes against architecture AND current state
 - Blocks cross-repo work until dependencies ready
-- Human reviews and approves everything
+- Human reviews everything (no auto-apply)
 
 ---
 
 ## Version
 
-**Current:** v1.0.0 (Baseline Snapshot & Cross-Repo Blocking)
+Current: **v1.0.0**
 
-See [CHANGELOG.md](CHANGELOG.md) for version history.
+See [CHANGELOG.md](CHANGELOG.md) for version history.  
+See [VERSIONING.md](VERSIONING.md) for release process.
 
 ---
 
