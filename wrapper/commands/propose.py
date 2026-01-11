@@ -54,22 +54,49 @@ def build_propose_prompt(
     if external_state:
         parts = []
         for repo, info in external_state.items():
-            parts.append(f"- {repo}: {info}")
-            # Check if any dependency is not baseline_verified
-            if isinstance(info, dict) and info.get("status") != "baseline_verified":
-                has_dependencies = True
+            if isinstance(info, dict):
+                # Enhanced summary with deviations and blockers
+                line = f"- {repo}:"
+                line += f" {len(info.get('done_steps', []))} steps"
+                line += f", {len(info.get('invariants', []))} invariants"
+                
+                devs = info.get('deviations', [])
+                if devs:
+                    line += f", {len(devs)} deviations"
+                
+                blockers = info.get('blockers', [])
+                if blockers:
+                    line += f" 🚨 BLOCKERS: {', '.join(blockers)}"
+                    has_dependencies = True
+                
+                parts.append(line)
+                
+                # Check if any dependency is not baseline_verified
+                if info.get("status") != "baseline_verified":
+                    has_dependencies = True
+            else:
+                parts.append(f"- {repo}: {info}")
         external_summary = "\n".join(parts)
     
     # Check for unverified dependencies in repo.yaml
     depends_on = repo_yaml.get("depends_on", [])
     unverified_deps = []
+    blocked_deps = {}  # repo -> list of blockers
+    
     if depends_on and external_state:
         for dep in depends_on:
             dep_repo = dep.get("repo") if isinstance(dep, dict) else dep
             if dep_repo:
                 dep_info = external_state.get(dep_repo, {})
+                
+                # Check if baseline not verified
                 if isinstance(dep_info, dict) and dep_info.get("status") != "baseline_verified":
                     unverified_deps.append(dep_repo)
+                
+                # Check for blockers (high-severity unresolved deviations)
+                blockers = dep_info.get("blockers", [])
+                if blockers:
+                    blocked_deps[dep_repo] = blockers
     
     must_not = repo_yaml.get("must_not", [])
     must_not_str = "\n".join(f"- {item}" for item in must_not) if must_not else "None specified"
@@ -82,6 +109,27 @@ DEPENDENCY WARNING:
 The following dependencies are NOT baseline verified: {', '.join(unverified_deps)}
 You MUST propose a verification or cleanup step, NOT a feature step.
 Cross-repo features are BLOCKED until all dependencies are verified.
+"""
+    
+    # Build BLOCKER warning (even stronger than unverified)
+    blocker_warning = ""
+    if blocked_deps:
+        blocker_lines = []
+        for repo, blockers in blocked_deps.items():
+            blocker_lines.append(f"  {repo}: {', '.join(blockers)}")
+        
+        blocker_warning = f"""
+🚨 CRITICAL DEPENDENCY BLOCKERS 🚨
+The following dependencies have UNRESOLVED HIGH-SEVERITY DEVIATIONS:
+{chr(10).join(blocker_lines)}
+
+YOU MUST:
+1. STOP all feature work in this repo
+2. Propose a step that says "BLOCKED - waiting for {list(blocked_deps.keys())[0]}"
+3. Output clear message telling user to fix the blocking repo first
+
+DO NOT propose any implementation or refactoring steps.
+ONLY propose a "blocked" verification step that documents the blocker.
 """
     
     # Build baseline context section
@@ -135,6 +183,9 @@ CRITICAL RULES - READ FIRST:
 5. PREFER cleanup over new features
 6. PREFER verification over implementation
 7. If dependencies exist and are unverified, BLOCK feature work
+8. If dependencies have BLOCKERS, STOP ALL WORK and propose blocker documentation
+
+{blocker_warning}
 
 {dep_warning}
 
@@ -182,9 +233,10 @@ STEP PROPOSAL RULES (STRICT):
 1. If no steps done yet → MUST be type: verification (baseline check)
 2. If baseline not clean → MUST be type: verification or cleanup
 3. If dependencies unverified → MUST be verification, NOT features
-4. Each step touches AT MOST 3 files
-5. Each step has AT MOST 3 success criteria
-6. forbidden list MUST include all repo-level must_not items
+4. If dependencies have BLOCKERS → MUST propose "blocked" step telling user to fix dependency repo
+5. Each step touches AT MOST 3 files
+6. Each step has AT MOST 3 success criteria
+7. forbidden list MUST include all repo-level must_not items
 7. NEVER touch files in other repos
 8. NEVER add new directories without explicit architecture approval
 9. When uncertain → propose verification to gather information

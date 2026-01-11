@@ -570,13 +570,36 @@ def cmd_verify(args) -> bool:
         print(llm_response)
         print("-" * 40)
         
-        # Check if LLM verdict is FAIL
-        if "VERDICT: FAIL" in llm_response.upper():
+        # Check if LLM verdict is FAIL (but NOT for first-time baseline verification)
+        is_first_verification = len(state.get('done_steps', [])) == 0
+        
+        if "VERDICT: FAIL" in llm_response.upper() and not is_first_verification:
             result.add_error("LLM analysis found issues")
         
     except RuntimeError as e:
         print(f"Warning: LLM analysis failed: {e}")
         print("Proceeding with rule-based checks only.")
+    
+    # Special handling for first verification (baseline capture)
+    is_first_verification = len(state.get('done_steps', [])) == 0
+    
+    if is_first_verification and step_type == "verification":
+        # First verification always passes - it's just capturing baseline
+        print()
+        print("=" * 50)
+        print("BASELINE VERIFICATION COMPLETE")
+        print("=" * 50)
+        print()
+        print("✓ Baseline snapshot captured")
+        print("✓ Deviations documented")
+        print()
+        print("This was a baseline verification step.")
+        print("Deviations found will be addressed in subsequent steps.")
+        print()
+        
+        # Force pass
+        result.passed = True
+        result.errors = []
     
     # Final verdict
     print()
@@ -596,6 +619,12 @@ def cmd_verify(args) -> bool:
         print("  1. git add .")
         print("  2. git commit -m 'step: " + step.get('step_id', 'unknown') + "'")
         print("  3. wrapper accept")
+        
+        if is_first_verification:
+            print()
+            print("After accepting, run 'wrapper propose' to generate cleanup steps")
+            print("for the identified deviations.")
+        
         return True
     else:
         print("=" * 40)

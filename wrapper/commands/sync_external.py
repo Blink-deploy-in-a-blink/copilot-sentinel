@@ -69,10 +69,44 @@ def extract_repo_state(repo_path: Path) -> dict:
     if not isinstance(invariants, list):
         invariants = []
     
+    # Load deviations from deviations.yaml
+    deviations_file = wrapper_dir / "deviations.yaml"
+    deviations_list = []
+    blockers = []
+    
+    if deviations_file.exists():
+        try:
+            import yaml
+            content = deviations_file.read_text(encoding='utf-8')
+            deviations_data = yaml.safe_load(content)
+            
+            if isinstance(deviations_data, dict):
+                devs = deviations_data.get("deviations", [])
+                for dev in devs:
+                    if isinstance(dev, dict):
+                        # Extract key info
+                        dev_summary = {
+                            "id": dev.get("id", "unknown"),
+                            "severity": dev.get("severity", "medium"),
+                            "description": dev.get("description", "")[:100],  # Truncate
+                            "resolved": dev.get("resolution_step") is not None
+                        }
+                        deviations_list.append(dev_summary)
+                        
+                        # Track unresolved high-severity as blockers
+                        if (dev.get("severity") == "high" and 
+                            dev.get("resolution_step") is None):
+                            blockers.append(dev.get("id", "unknown"))
+        except Exception:
+            # Ignore deviations.yaml parsing errors
+            pass
+    
     return {
         "repo_name": repo_name,
         "done_steps": done_steps,
         "invariants": invariants,
+        "deviations": deviations_list,
+        "blockers": blockers,
     }
 
 
@@ -102,11 +136,16 @@ def cmd_sync_external(args) -> bool:
             external_state[repo_name] = {
                 "done_steps": extracted["done_steps"],
                 "invariants": extracted["invariants"],
+                "deviations": extracted["deviations"],
+                "blockers": extracted["blockers"],
             }
             
             print(f"    Repo: {repo_name}")
             print(f"    Steps: {len(extracted['done_steps'])}")
             print(f"    Invariants: {len(extracted['invariants'])}")
+            print(f"    Deviations: {len(extracted['deviations'])}")
+            if extracted["blockers"]:
+                print(f"    ⚠️  BLOCKERS: {', '.join(extracted['blockers'])}")
             
         except FileNotFoundError as e:
             errors.append(str(e))
