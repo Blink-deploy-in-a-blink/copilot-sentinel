@@ -178,11 +178,8 @@ def capture_baseline_snapshot() -> Dict[str, Any]:
     Returns:
         Complete snapshot dictionary
     """
-    # Determine root path
-    if is_git_repo():
-        root_path = get_repo_root()
-    else:
-        root_path = Path.cwd()
+    # Use current working directory as root
+    root_path = Path.cwd()
     
     # Scan repository
     scan_data = scan_repository(root_path)

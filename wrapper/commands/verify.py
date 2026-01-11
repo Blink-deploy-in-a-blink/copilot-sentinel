@@ -329,7 +329,7 @@ def capture_baseline_if_first(state: dict, architecture: str) -> bool:
     print("=" * 50)
     
     # Import here to avoid circular imports
-    from commands.snapshot import capture_baseline_snapshot
+    from wrapper.commands.snapshot import capture_baseline_snapshot
     
     snapshot = capture_baseline_snapshot()
     save_baseline_snapshot(snapshot)
