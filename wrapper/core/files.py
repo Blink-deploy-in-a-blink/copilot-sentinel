@@ -23,14 +23,14 @@ from wrapper.core.paths import (
 def load_text_file(filepath: Path) -> Optional[str]:
     """Load a text file, return None if not found."""
     if filepath.exists():
-        return filepath.read_text()
+        return filepath.read_text(encoding='utf-8')
     return None
 
 
 def load_yaml_file(filepath: Path) -> Optional[dict]:
     """Load a YAML file, return None if not found."""
     if filepath.exists():
-        content = filepath.read_text()
+        content = filepath.read_text(encoding='utf-8')
         return yaml.safe_load(content) or {}
     return None
 
@@ -38,7 +38,7 @@ def load_yaml_file(filepath: Path) -> Optional[dict]:
 def load_json_file(filepath: Path) -> Optional[dict]:
     """Load a JSON file, return None if not found."""
     if filepath.exists():
-        content = filepath.read_text()
+        content = filepath.read_text(encoding='utf-8')
         return json.loads(content)
     return None
 
@@ -46,21 +46,21 @@ def load_json_file(filepath: Path) -> Optional[dict]:
 def save_text_file(filepath: Path, content: str) -> None:
     """Save content to a text file."""
     ensure_wrapper_dir()
-    filepath.write_text(content)
+    filepath.write_text(content, encoding='utf-8')
 
 
 def save_yaml_file(filepath: Path, data: dict) -> None:
     """Save data to a YAML file."""
     ensure_wrapper_dir()
     content = yaml.dump(data, default_flow_style=False, sort_keys=False, allow_unicode=True)
-    filepath.write_text(content)
+    filepath.write_text(content, encoding='utf-8')
 
 
 def save_json_file(filepath: Path, data: dict) -> None:
     """Save data to a JSON file."""
     ensure_wrapper_dir()
     content = json.dumps(data, indent=2)
-    filepath.write_text(content)
+    filepath.write_text(content, encoding='utf-8')
 
 
 # Specific loaders

@@ -40,7 +40,7 @@ def extract_repo_state(repo_path: Path) -> dict:
         raise ValueError(f"No state.json found in: {wrapper_dir}")
     
     try:
-        content = state_file.read_text()
+        content = state_file.read_text(encoding='utf-8')
         state = json.loads(content)
     except json.JSONDecodeError as e:
         raise ValueError(f"Invalid JSON in {state_file}: {e}")

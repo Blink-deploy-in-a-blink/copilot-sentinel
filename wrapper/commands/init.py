@@ -100,7 +100,7 @@ def cmd_init(args) -> bool:
     if arch_path.exists():
         print(f"  {ARCHITECTURE_FILE} already exists, skipping")
     else:
-        arch_path.write_text(ARCHITECTURE_TEMPLATE.format(repo_name=repo_name))
+        arch_path.write_text(ARCHITECTURE_TEMPLATE.format(repo_name=repo_name), encoding='utf-8')
         print(f"  Created {ARCHITECTURE_FILE}")
     
     # Create repo.yaml if missing
@@ -108,7 +108,7 @@ def cmd_init(args) -> bool:
     if repo_path.exists():
         print(f"  {REPO_YAML_FILE} already exists, skipping")
     else:
-        repo_path.write_text(REPO_YAML_TEMPLATE.format(repo_name=repo_name))
+        repo_path.write_text(REPO_YAML_TEMPLATE.format(repo_name=repo_name), encoding='utf-8')
         print(f"  Created {REPO_YAML_FILE}")
     
     # Create config.yaml if missing
@@ -116,7 +116,7 @@ def cmd_init(args) -> bool:
     if config_path.exists():
         print(f"  {CONFIG_FILE} already exists, skipping")
     else:
-        config_path.write_text(CONFIG_TEMPLATE)
+        config_path.write_text(CONFIG_TEMPLATE, encoding='utf-8')
         print(f"  Created {CONFIG_FILE}")
     
     print()
