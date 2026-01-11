@@ -47,19 +47,22 @@ def check_allowed_files(
 ) -> None:
     """Check that only allowed files were modified."""
     
-    # If allowed is empty, no files should be changed
+    # Filter out .wrapper/ files - these are allowed to change
+    changed_code = {f for f in changed if not f.startswith('.wrapper/')}
+    
+    # If allowed is empty, no CODE files should be changed (but .wrapper/ files are OK)
     if not allowed:
-        if changed:
+        if changed_code:
             result.add_error(
-                f"No files should be modified, but found changes in: {', '.join(sorted(changed))}"
+                f"No files should be modified, but found changes in: {', '.join(sorted(changed_code))}"
             )
         return
     
     # Convert allowed to set for comparison
     allowed_set = set(allowed)
     
-    # Check for disallowed files
-    disallowed = changed - allowed_set
+    # Check for disallowed files (excluding .wrapper/ files)
+    disallowed = changed_code - allowed_set
     if disallowed:
         result.add_error(
             f"Modified files not in allowed list: {', '.join(sorted(disallowed))}"
