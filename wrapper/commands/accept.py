@@ -7,10 +7,98 @@ from datetime import datetime
 from wrapper.core.files import (
     load_state,
     load_step_yaml,
+    load_deviations,
     save_state,
+    save_deviations,
     add_done_step,
 )
 from wrapper.core.paths import get_file_path, STEP_YAML_FILE
+
+
+def update_deviation_resolutions(step_id: str, step_goal: str) -> int:
+    """
+    Check if this step resolves any deviations and update them.
+    
+    Uses LLM to match step goal against unresolved deviations.
+    
+    Returns:
+        Number of deviations marked as resolved
+    """
+    deviations = load_deviations()
+    if not deviations or not deviations.get("deviations"):
+        return 0
+    
+    unresolved = [
+        dev for dev in deviations["deviations"]
+        if dev.get("resolution_step") is None
+    ]
+    
+    if not unresolved:
+        return 0
+    
+    # Use LLM to determine which deviations this step resolves
+    from wrapper.core.llm import get_llm_client
+    
+    unresolved_list = "\n".join(
+        f"- {dev.get('id')}: {dev.get('description', '')[:100]}"
+        for dev in unresolved
+    )
+    
+    prompt = f"""Analyze if this step resolves any of the listed deviations.
+
+STEP COMPLETED:
+- ID: {step_id}
+- Goal: {step_goal}
+
+UNRESOLVED DEVIATIONS:
+{unresolved_list}
+
+OUTPUT REQUIREMENTS:
+Return ONLY a JSON array of deviation IDs that this step resolves.
+If none are resolved, return empty array: []
+
+Example outputs:
+["no-polling-support"]
+["missing-tests-directory", "missing-ci-config"]
+[]
+
+Output now (ONLY the JSON array, nothing else):"""
+
+    try:
+        llm = get_llm_client()
+        response = llm.generate(prompt, "verifier")
+        
+        # Parse JSON response
+        import json
+        response = response.strip()
+        
+        # Clean up if wrapped in code fences
+        if response.startswith("```"):
+            lines = response.split("\n")
+            response = "\n".join(line for line in lines if not line.startswith("```"))
+            response = response.strip()
+        
+        resolved_ids = json.loads(response)
+        
+        if not isinstance(resolved_ids, list):
+            return 0
+        
+        # Update deviations
+        updated_count = 0
+        for dev in deviations["deviations"]:
+            if dev.get("id") in resolved_ids and dev.get("resolution_step") is None:
+                dev["resolution_step"] = step_id
+                updated_count += 1
+        
+        if updated_count > 0:
+            save_deviations(deviations)
+        
+        return updated_count
+        
+    except Exception as e:
+        # If LLM fails, silently skip (don't block accept)
+        print(f"  Note: Could not auto-update deviations ({e})")
+        return 0
 
 
 def cmd_accept(args) -> bool:
@@ -70,6 +158,13 @@ def cmd_accept(args) -> bool:
     
     # Add to done steps
     add_done_step(step_id, f"{step_type} completed")
+    
+    # Check if this step resolves any deviations
+    step_goal = step.get("goal", "")
+    if step_goal:
+        resolved_count = update_deviation_resolutions(step_id, step_goal)
+        if resolved_count > 0:
+            print(f"✓ Marked {resolved_count} deviation(s) as resolved by this step")
     
     # Update invariants if this was a verification step
     if step_type == "verification":
