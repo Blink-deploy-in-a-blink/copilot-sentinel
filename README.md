@@ -57,7 +57,10 @@ wrapper init
 #   .wrapper/config.yaml      - LLM API key
 
 # Set API key (or edit config.yaml)
+# Linux/macOS:
 export DEEPSEEK_API_KEY="your-key"
+# Windows PowerShell:
+$env:DEEPSEEK_API_KEY="your-key"
 
 # Propose first step (will be verification)
 wrapper propose
@@ -162,11 +165,24 @@ your-repo/
 
 Environment variables (take precedence):
 ```bash
+# Linux/macOS:
 export DEEPSEEK_API_KEY="your-key"
 # or
 export OPENAI_API_KEY="your-key"
 # or
 export ANTHROPIC_API_KEY="your-key"
+
+# Windows PowerShell:
+$env:DEEPSEEK_API_KEY="your-key"
+# or
+$env:OPENAI_API_KEY="your-key"
+# or
+$env:ANTHROPIC_API_KEY="your-key"
+```
+
+**Note:** Environment variables set with `$env:` in PowerShell only last for the current session. To make them permanent, use:
+```powershell
+[System.Environment]::SetEnvironmentVariable('DEEPSEEK_API_KEY', 'your-key', 'User')
 ```
 
 Or in `.wrapper/config.yaml`:
