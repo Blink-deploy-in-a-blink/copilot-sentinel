@@ -1,4 +1,4 @@
-# wrapper
+# Copilot Sentinel
 
 **AI-assisted development with architectural guardrails.**
 
