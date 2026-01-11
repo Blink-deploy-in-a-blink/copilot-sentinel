@@ -90,13 +90,13 @@ Step 3: Add polling mechanism (fixes 1 deviation)
 ... continue until all resolved
 ```
 
-### 🚨 Cross-Repo Dependency Blocking
+###  Cross-Repo Dependency Blocking
 ```bash
 # In Agent repo
 wrapper sync-external --from ../ui
 
 wrapper propose
-# 🚨 BLOCKED: UI has unresolved deviation "no-polling-support"
+#  BLOCKED: UI has unresolved deviation "no-polling-support"
 # → Proposes: "blocked-waiting-for-ui" step
 # → Output: "Fix UI repo first!"
 
@@ -106,7 +106,7 @@ wrapper propose
 # ✅ Can proceed (blocker resolved)
 ```
 
-### 📋 Smart Deviation Resolution
+###  Smart Deviation Resolution
 ```bash
 wrapper accept
 # → LLM checks: "Does this step resolve any deviations?"

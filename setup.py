@@ -5,11 +5,15 @@ Setup script for wrapper CLI tool.
 
 from setuptools import setup, find_packages
 
+# Read version from VERSION file
+with open("VERSION", "r", encoding="utf-8") as f:
+    version = f.read().strip()
+
 setup(
     name="wrapper",
-    version="0.1.0",
-    description="Prompt Compiler + Verifier for Copilot-based coding",
-    author="Your Name",
+    version=version,
+    description="AI-assisted development with architectural guardrails",
+    author="Blink Deploy",
     python_requires=">=3.9",
     packages=find_packages(),
     install_requires=[

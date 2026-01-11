@@ -23,10 +23,24 @@ from wrapper.commands.snapshot import cmd_snapshot
 from wrapper.commands.diff_baseline import cmd_diff_baseline
 
 
+def get_version():
+    """Read version from VERSION file."""
+    try:
+        version_file = Path(__file__).parent.parent / "VERSION"
+        return version_file.read_text(encoding='utf-8').strip()
+    except:
+        return "unknown"
+
+
 def main():
     parser = argparse.ArgumentParser(
         prog="wrapper",
-        description="Prompt Compiler + Verifier for Copilot-based coding"
+        description="AI-assisted development with architectural guardrails"
+    )
+    parser.add_argument(
+        '--version', '-v',
+        action='version',
+        version=f'wrapper v{get_version()}'
     )
     subparsers = parser.add_subparsers(dest="command", required=True)
 
