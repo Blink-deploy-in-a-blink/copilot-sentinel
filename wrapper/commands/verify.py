@@ -3,18 +3,22 @@ wrapper verify - Verify git diff against step constraints.
 """
 
 import re
-from typing import List, Tuple
+from typing import List, Tuple, Optional
 
 from wrapper.core.files import (
     load_architecture,
     load_repo_yaml,
     load_state,
     load_step_yaml,
+    load_copilot_output,
+    load_baseline_snapshot,
     save_diff,
     save_repair_prompt,
     save_state,
+    save_baseline_snapshot,
+    save_deviations,
 )
-from wrapper.core.paths import get_file_path, STEP_YAML_FILE
+from wrapper.core.paths import get_file_path, STEP_YAML_FILE, COPILOT_OUTPUT_FILE, BASELINE_SNAPSHOT_FILE
 from wrapper.core.git import get_diff, get_changed_files, get_new_directories, is_git_repo
 from wrapper.core.llm import get_llm_client
 
@@ -122,7 +126,8 @@ def build_llm_verify_prompt(
     step: dict,
     repo_yaml: dict,
     architecture: str,
-    rule_check_results: VerificationResult
+    rule_check_results: VerificationResult,
+    copilot_output: Optional[str] = None
 ) -> str:
     """Build prompt for LLM verification analysis."""
     
@@ -140,7 +145,32 @@ def build_llm_verify_prompt(
     if rule_check_results.errors:
         rule_issues = "RULE CHECK FAILURES:\n" + "\n".join(f"- {e}" for e in rule_check_results.errors)
     
-    prompt = f'''Analyze this git diff against the step constraints.
+    # Build copilot output section
+    copilot_section = ""
+    if copilot_output:
+        copilot_section = f"""
+COPILOT/AI ASSISTANT OUTPUT:
+```
+{copilot_output[:6000]}
+```
+"""
+    
+    # Build diff section (may be empty for verification steps)
+    diff_section = ""
+    if diff.strip():
+        diff_section = f"""
+GIT DIFF:
+```
+{diff[:8000]}
+```
+"""
+    else:
+        diff_section = """
+GIT DIFF:
+(No code changes - this is a verification-only step)
+"""
+
+    prompt = f'''Analyze this step against the constraints.
 
 STEP:
 - ID: {step.get("step_id")}
@@ -161,11 +191,8 @@ ARCHITECTURE CONTEXT (for reference):
 {architecture[:2000]}...
 
 {rule_issues}
-
-GIT DIFF:
-```
-{diff[:8000]}
-```
+{copilot_section}
+{diff_section}
 
 ANALYSIS REQUIRED:
 1. Check if the changes align with the stated goal
@@ -252,6 +279,183 @@ def build_repair_prompt(
     return "\n".join(lines)
 
 
+def is_first_verification(state: dict) -> bool:
+    """Check if this is the first verification (no done_steps yet)."""
+    return len(state.get("done_steps", [])) == 0
+
+
+def get_copilot_output_content() -> Optional[str]:
+    """
+    Load and validate copilot_output.txt content.
+    Returns None if file doesn't exist or only contains template.
+    """
+    content = load_copilot_output()
+    if content is None:
+        return None
+    
+    # Check if content has actual output (not just template)
+    marker = "[PASTE AI OUTPUT BELOW THIS LINE]"
+    if marker in content:
+        # Get content after the marker
+        parts = content.split(marker)
+        if len(parts) > 1:
+            actual_content = parts[1].strip()
+            if actual_content:
+                return actual_content
+        return None
+    
+    # No marker found - return whole content if non-empty
+    return content.strip() if content.strip() else None
+
+
+def capture_baseline_if_first(state: dict, architecture: str) -> bool:
+    """
+    Capture baseline snapshot if this is first verification.
+    Also generates deviations via LLM.
+    
+    Returns True if baseline was captured.
+    """
+    if not is_first_verification(state):
+        return False
+    
+    # Check if baseline already exists
+    existing = load_baseline_snapshot()
+    if existing is not None:
+        return False
+    
+    print()
+    print("=" * 50)
+    print("FIRST VERIFICATION - Capturing Baseline Snapshot")
+    print("=" * 50)
+    
+    # Import here to avoid circular imports
+    from commands.snapshot import capture_baseline_snapshot
+    
+    snapshot = capture_baseline_snapshot()
+    save_baseline_snapshot(snapshot)
+    
+    print(f"\nBaseline captured:")
+    print(f"  Files: {snapshot['summary']['total_files']}")
+    print(f"  Directories: {snapshot['summary']['total_directories']}")
+    print(f"  Saved to: {get_file_path(BASELINE_SNAPSHOT_FILE)}")
+    
+    # Update state with baseline timestamp
+    state["baseline_snapshot_timestamp"] = snapshot["timestamp"]
+    state["baseline_verified"] = False  # Will be set True on accept
+    save_state(state)
+    
+    # Generate deviations via LLM
+    print("\nAnalyzing deviations from target architecture...")
+    try:
+        generate_deviations_via_llm(architecture, snapshot)
+    except Exception as e:
+        print(f"Warning: Could not generate deviations: {e}")
+        # Create empty deviations file
+        save_deviations({"deviations": []})
+    
+    print()
+    return True
+
+
+def generate_deviations_via_llm(architecture: str, snapshot: dict) -> None:
+    """Generate deviations.yaml by comparing architecture to baseline."""
+    
+    try:
+        llm = get_llm_client()
+    except RuntimeError as e:
+        print(f"  LLM not available: {e}")
+        save_deviations({"deviations": []})
+        return
+    
+    # Build summary of snapshot for prompt
+    file_types_str = "\n".join(
+        f"  {ext}: {count}" 
+        for ext, count in list(snapshot["summary"]["file_types"].items())[:10]
+    )
+    
+    dirs_str = "\n".join(f"  - {d}" for d in snapshot["directories"][:30])
+    files_str = "\n".join(f"  - {f}" for f in snapshot["files"][:50])
+    
+    key_files = [k for k, v in snapshot["key_files_present"].items() if v]
+    key_files_str = ", ".join(key_files) if key_files else "None"
+    
+    prompt = f'''Compare target architecture against actual repository state.
+Generate deviations.yaml listing ALL significant mismatches.
+
+TARGET ARCHITECTURE:
+{architecture}
+
+ACTUAL REPOSITORY STATE:
+- Total files: {snapshot["summary"]["total_files"]}
+- Total directories: {snapshot["summary"]["total_directories"]}
+- Git branch: {snapshot["git_status"]["branch"]}
+- Last commit: {snapshot["git_status"]["last_commit_hash"]}
+
+File types:
+{file_types_str}
+
+Key files present: {key_files_str}
+
+Directories:
+{dirs_str}
+
+Sample files:
+{files_str}
+
+Generate ONLY valid YAML (no markdown code fences) with this structure:
+
+deviations:
+  - id: descriptive-kebab-case-id
+    description: Clear description of the deviation
+    severity: high|medium|low
+    category: missing-component|extra-code|structural|configuration
+    auto_detected: true
+    affected_files: []
+    expected: What architecture specifies
+    actual: What currently exists
+    resolution_step: null
+
+List ALL significant deviations. Be thorough but focus on architectural mismatches.
+If repository matches architecture well, return: deviations: []
+'''
+    
+    try:
+        response = llm.generate(prompt, "verifier")
+        
+        # Clean up response
+        response = response.strip()
+        if response.startswith("```"):
+            lines = response.split("\n")
+            if lines[0].startswith("```"):
+                lines = lines[1:]
+            if lines and lines[-1].startswith("```"):
+                lines = lines[:-1]
+            response = "\n".join(lines)
+        
+        # Parse YAML
+        import yaml
+        deviations = yaml.safe_load(response)
+        
+        if not isinstance(deviations, dict):
+            deviations = {"deviations": []}
+        if "deviations" not in deviations:
+            deviations = {"deviations": []}
+        
+        save_deviations(deviations)
+        
+        dev_count = len(deviations.get("deviations", []))
+        print(f"  Found {dev_count} deviation(s)")
+        
+        # Show high severity ones
+        for dev in deviations.get("deviations", [])[:3]:
+            if dev.get("severity") == "high":
+                print(f"    [HIGH] {dev.get('id')}: {dev.get('description', '')[:60]}...")
+        
+    except Exception as e:
+        print(f"  Error parsing LLM response: {e}")
+        save_deviations({"deviations": []})
+
+
 def cmd_verify(args) -> bool:
     """Verify git diff against step constraints."""
     
@@ -267,60 +471,75 @@ def cmd_verify(args) -> bool:
         return False
     
     staged_only = getattr(args, 'staged', False)
+    step_type = step.get("type", "implementation")
     
     print(f"Verifying step: {step.get('step_id')}")
+    print(f"Type: {step_type}")
     print(f"Mode: {'staged changes only' if staged_only else 'all uncommitted changes'}")
+    
+    # Load state and architecture early
+    state = load_state()
+    architecture = load_architecture() or ""
+    
+    # Auto-capture baseline on first verification
+    capture_baseline_if_first(state, architecture)
+    
+    # Load copilot output
+    copilot_output = get_copilot_output_content()
     
     # Get diff
     diff = get_diff(staged_only)
-    if not diff.strip():
-        print("No changes detected.")
-        if step.get("type") == "verification":
-            print("PASS: Verification step - no changes expected.")
-            # Record successful verification in state
-            state = load_state()
-            state["last_verify_status"] = "PASS"
-            state["last_verify_step"] = step.get("step_id")
-            state["last_verify_timestamp"] = __import__("datetime").datetime.now().isoformat()
-            save_state(state)
-            return True
-        else:
-            print("Warning: Implementation step but no changes found.")
-            # Still mark as pass if no changes (maybe they're already done)
-            state = load_state()
-            state["last_verify_status"] = "PASS"
-            state["last_verify_step"] = step.get("step_id")
-            state["last_verify_timestamp"] = __import__("datetime").datetime.now().isoformat()
-            save_state(state)
-            return True
+    has_diff = bool(diff.strip())
     
-    # Save diff
-    save_diff(diff)
-    print(f"Diff saved to: {get_file_path('diff.txt')}")
+    # For verification steps with no diff, require copilot_output
+    if step_type == "verification" and not has_diff:
+        if copilot_output is None:
+            print()
+            print("=" * 50)
+            print("COPILOT OUTPUT REQUIRED")
+            print("=" * 50)
+            print()
+            print("This is a verification step with no code changes.")
+            print(f"You must paste the AI's analysis into: {get_file_path(COPILOT_OUTPUT_FILE)}")
+            print()
+            print("Steps:")
+            print("  1. Give copilot_prompt.txt to your AI assistant")
+            print("  2. Paste the response into copilot_output.txt")
+            print("  3. Run 'wrapper verify' again")
+            return False
+        else:
+            print(f"\nUsing copilot output for verification ({len(copilot_output)} chars)")
+    
+    if has_diff:
+        # Save diff
+        save_diff(diff)
+        print(f"Diff saved to: {get_file_path('diff.txt')}")
+    else:
+        print("No git diff detected.")
     
     # Load configuration
-    architecture = load_architecture() or ""
     repo_yaml = load_repo_yaml() or {}
     
     # Run rule-based checks
     result = VerificationResult()
     
-    changed_files = get_changed_files(staged_only)
-    print(f"Changed files: {len(changed_files)}")
-    
-    # Check allowed files
-    allowed_files = step.get("allowed_files", [])
-    check_allowed_files(changed_files, allowed_files, result)
-    
-    # Check new directories
-    new_dirs = get_new_directories(staged_only)
-    if new_dirs:
-        check_new_directories(new_dirs, architecture, result)
-    
-    # Check forbidden patterns
-    forbidden = list(repo_yaml.get("must_not", []))
-    forbidden.extend(step.get("forbidden", []))
-    check_forbidden_patterns(diff, forbidden, result)
+    if has_diff:
+        changed_files = get_changed_files(staged_only)
+        print(f"Changed files: {len(changed_files)}")
+        
+        # Check allowed files
+        allowed_files = step.get("allowed_files", [])
+        check_allowed_files(changed_files, allowed_files, result)
+        
+        # Check new directories
+        new_dirs = get_new_directories(staged_only)
+        if new_dirs:
+            check_new_directories(new_dirs, architecture, result)
+        
+        # Check forbidden patterns
+        forbidden = list(repo_yaml.get("must_not", []))
+        forbidden.extend(step.get("forbidden", []))
+        check_forbidden_patterns(diff, forbidden, result)
     
     # Report rule check results
     if result.errors:
@@ -337,7 +556,9 @@ def cmd_verify(args) -> bool:
     print("\nRunning LLM analysis...")
     try:
         llm = get_llm_client()
-        prompt = build_llm_verify_prompt(diff, step, repo_yaml, architecture, result)
+        prompt = build_llm_verify_prompt(
+            diff, step, repo_yaml, architecture, result, copilot_output
+        )
         llm_response = llm.generate(prompt, "verifier")
         result.llm_analysis = llm_response
         

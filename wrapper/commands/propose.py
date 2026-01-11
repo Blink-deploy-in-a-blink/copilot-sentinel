@@ -8,6 +8,8 @@ from wrapper.core.files import (
     load_state,
     load_external_state,
     load_step_yaml,
+    load_baseline_snapshot,
+    load_deviations,
     save_step_yaml,
 )
 from wrapper.core.paths import get_file_path, STEP_YAML_FILE, ARCHITECTURE_FILE, REPO_YAML_FILE
@@ -36,7 +38,9 @@ def build_propose_prompt(
     architecture: str,
     repo_yaml: dict,
     state: dict,
-    external_state: dict | None
+    external_state: dict | None,
+    baseline: dict | None = None,
+    deviations: dict | None = None
 ) -> str:
     """Build the LLM prompt for proposing next step."""
     
@@ -80,6 +84,47 @@ You MUST propose a verification or cleanup step, NOT a feature step.
 Cross-repo features are BLOCKED until all dependencies are verified.
 """
     
+    # Build baseline context section
+    baseline_section = ""
+    if baseline:
+        file_types = baseline.get("summary", {}).get("file_types", {})
+        file_types_str = ", ".join(f"{ext}: {count}" for ext, count in list(file_types.items())[:8])
+        
+        sample_files = baseline.get("files", [])[:30]
+        sample_files_str = "\n".join(f"  - {f}" for f in sample_files)
+        
+        dirs = baseline.get("directories", [])[:20]
+        dirs_str = ", ".join(dirs) if dirs else "None"
+        
+        baseline_section = f"""
+ACTUAL REPOSITORY STATE (from baseline snapshot):
+- Captured: {baseline.get("timestamp", "unknown")}
+- Total files: {baseline.get("summary", {}).get("total_files", "?")}
+- Total directories: {baseline.get("summary", {}).get("total_directories", "?")}
+- File types: {file_types_str}
+- Directories: {dirs_str}
+
+Sample files:
+{sample_files_str}
+"""
+    
+    # Build deviations section
+    deviations_section = ""
+    if deviations and deviations.get("deviations"):
+        dev_list = deviations["deviations"]
+        dev_lines = []
+        for dev in dev_list[:10]:
+            severity = dev.get("severity", "?")
+            dev_id = dev.get("id", "unknown")
+            desc = dev.get("description", "")[:80]
+            dev_lines.append(f"  - [{severity.upper()}] {dev_id}: {desc}")
+        deviations_section = f"""
+KNOWN DEVIATIONS FROM TARGET ARCHITECTURE:
+{chr(10).join(dev_lines)}
+"""
+        if len(dev_list) > 10:
+            deviations_section += f"  ... and {len(dev_list) - 10} more\n"
+
     prompt = f'''Based on the architecture and current state, propose the NEXT development step.
 
 CRITICAL RULES - READ FIRST:
@@ -95,7 +140,8 @@ CRITICAL RULES - READ FIRST:
 
 ARCHITECTURE:
 {architecture}
-
+{baseline_section}
+{deviations_section}
 REPO CONFIGURATION:
 - Name: {repo_yaml.get("repo_name", "unknown")}
 - Role: {repo_yaml.get("repo_role", "unspecified")}
@@ -165,6 +211,8 @@ def cmd_propose(args) -> bool:
     repo_yaml = load_repo_yaml()
     state = load_state()
     external_state = load_external_state()
+    baseline = load_baseline_snapshot()
+    deviations = load_deviations()
     
     # Check if step.yaml already exists
     existing_step = load_step_yaml()
@@ -178,13 +226,21 @@ def cmd_propose(args) -> bool:
     
     print("Generating step proposal...")
     
+    # Show context info
+    if baseline:
+        print(f"  Using baseline snapshot from: {baseline.get('timestamp', 'unknown')}")
+    if deviations and deviations.get("deviations"):
+        print(f"  Known deviations: {len(deviations['deviations'])}")
+    
     try:
         llm = get_llm_client()
     except RuntimeError as e:
         print(f"Error: {e}")
         return False
     
-    prompt = build_propose_prompt(architecture, repo_yaml, state, external_state)
+    prompt = build_propose_prompt(
+        architecture, repo_yaml, state, external_state, baseline, deviations
+    )
     
     try:
         response = llm.generate(prompt, "step_proposer")

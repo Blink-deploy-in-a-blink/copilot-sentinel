@@ -8,9 +8,10 @@ from wrapper.core.files import (
     load_state,
     load_step_yaml,
     save_copilot_prompt,
+    save_copilot_output,
     save_verify_md,
 )
-from wrapper.core.paths import get_file_path, STEP_YAML_FILE, ARCHITECTURE_FILE, REPO_YAML_FILE
+from wrapper.core.paths import get_file_path, STEP_YAML_FILE, ARCHITECTURE_FILE, REPO_YAML_FILE, COPILOT_OUTPUT_FILE
 from wrapper.core.llm import get_llm_client
 
 
@@ -199,8 +200,33 @@ def build_verify_checklist(step: dict, repo_yaml: dict) -> str:
     return "\n".join(lines)
 
 
+def build_copilot_output_template(step: dict) -> str:
+    """Build template for copilot_output.txt."""
+    step_type = step.get("type", "unknown")
+    step_id = step.get("step_id", "unknown")
+    
+    return f'''================================================================================
+COPILOT OUTPUT FILE
+================================================================================
+
+Step: {step_id}
+Type: {step_type}
+
+INSTRUCTIONS:
+After getting AI assistant's response, paste it below, save this file,
+then run: wrapper verify
+
+{"For VERIFICATION steps: Paste the analysis of repository state" if step_type == "verification" else "For IMPLEMENTATION steps: Paste description of changes made"}
+
+================================================================================
+
+[PASTE AI OUTPUT BELOW THIS LINE]
+
+'''
+
+
 def cmd_compile(args) -> bool:
-    """Compile copilot_prompt.txt and verify.md."""
+    """Compile copilot_prompt.txt, verify.md, and copilot_output.txt template."""
     
     if not check_required_files():
         return False
@@ -242,19 +268,25 @@ def cmd_compile(args) -> bool:
     # Generate verify.md checklist
     verify_content = build_verify_checklist(step, repo_yaml)
     
+    # Generate copilot_output.txt template
+    output_template = build_copilot_output_template(step)
+    
     # Save outputs
     save_copilot_prompt(copilot_prompt)
     save_verify_md(verify_content)
+    save_copilot_output(output_template)
     
     prompt_path = get_file_path("copilot_prompt.txt")
     verify_path = get_file_path("verify.md")
+    output_path = get_file_path(COPILOT_OUTPUT_FILE)
     
     print(f"\nGenerated:")
     print(f"  - {prompt_path}")
     print(f"  - {verify_path}")
+    print(f"  - {output_path}")
     print(f"\nNext steps:")
     print(f"  1. Copy contents of copilot_prompt.txt to Copilot")
-    print(f"  2. Let Copilot implement the changes")
+    print(f"  2. Paste Copilot's response into copilot_output.txt")
     print(f"  3. Run: wrapper verify")
     
     return True

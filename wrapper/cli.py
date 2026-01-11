@@ -19,6 +19,8 @@ from wrapper.commands.verify import cmd_verify
 from wrapper.commands.accept import cmd_accept
 from wrapper.commands.init import cmd_init
 from wrapper.commands.sync_external import cmd_sync_external
+from wrapper.commands.snapshot import cmd_snapshot
+from wrapper.commands.diff_baseline import cmd_diff_baseline
 
 
 def main():
@@ -67,6 +69,20 @@ def main():
         help="Path to another repo (can specify multiple times)"
     )
     sync_parser.set_defaults(func=cmd_sync_external)
+
+    # snapshot command
+    snapshot_parser = subparsers.add_parser(
+        "snapshot",
+        help="Capture baseline snapshot of repository (usually auto-captured)"
+    )
+    snapshot_parser.set_defaults(func=cmd_snapshot)
+
+    # diff-baseline command
+    diff_baseline_parser = subparsers.add_parser(
+        "diff-baseline",
+        help="Compare current repo state against baseline snapshot"
+    )
+    diff_baseline_parser.set_defaults(func=cmd_diff_baseline)
 
     args = parser.parse_args()
     

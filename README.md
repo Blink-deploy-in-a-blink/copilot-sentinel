@@ -1,8 +1,8 @@
-# Copilot Sentinel
+# wrapper
 
-**Prompt Compiler + Verifier for AI-assisted coding.**
+**Prompt Compiler + Verifier for Copilot-based coding.**
 
-A strict, boring CLI tool that enforces architectural discipline when using GitHub Copilot, Claude Code, Cursor, or any AI coding assistant.
+A strict, boring CLI tool that enforces architectural discipline when using GitHub Copilot.
 
 ## What It Does
 
@@ -14,33 +14,18 @@ A strict, boring CLI tool that enforces architectural discipline when using GitH
 ## Installation
 
 ```bash
-# Clone the repository
-git clone https://github.com/Blink-deploy-in-a-blink/copilot-sentinel.git
-cd copilot-sentinel
+# Clone or copy the wrapper directory to your machine
+cd wrapper
 
 # Install dependencies
 pip install -r requirements.txt
 
-# Install the CLI tool (installs as 'wrapper' command)
+# Option A: Install globally
 pip install -e .
 
-# Verify installation
-wrapper --help
+# Option B: Use directly
+alias wrapper="python /path/to/wrapper/wrapper.py"
 ```
-
-### Custom Command Name (Optional)
-
-If you want to rename the CLI command (e.g., to `sentinel` or `guard`), edit `setup.py`:
-
-```python
-entry_points={
-    "console_scripts": [
-        "sentinel=wrapper.cli:main",  # Change 'sentinel' to your preferred name
-    ],
-},
-```
-
-Then reinstall: `pip install -e .`
 
 ## Quick Start
 
@@ -57,10 +42,7 @@ wrapper init
 #   .wrapper/config.yaml      - LLM API key
 
 # Set API key (or edit config.yaml)
-# Linux/macOS:
 export DEEPSEEK_API_KEY="your-key"
-# Windows PowerShell:
-$env:DEEPSEEK_API_KEY="your-key"
 
 # Propose first step (will be verification)
 wrapper propose
@@ -69,18 +51,24 @@ wrapper propose
 # Then compile the Copilot prompt
 wrapper compile
 
-# Copy .wrapper/copilot_prompt.txt to Copilot
-# Let Copilot make changes
+# Two files created:
+#   - copilot_prompt.txt (give to AI)
+#   - copilot_output.txt (template for AI response)
+
+# Copy copilot_prompt.txt to your AI assistant
+# Paste the AI's response into copilot_output.txt
 
 # Verify the changes
 wrapper verify
+# On FIRST verify: automatically captures baseline_snapshot.json
+#                  and auto-generates deviations.yaml
 
 # If passed, commit and accept
 git commit -am "step: baseline-verification"
 wrapper accept
 
 # Repeat for next step
-wrapper propose
+wrapper propose  # Now uses baseline context!
 ```
 
 ## Commands
@@ -92,30 +80,39 @@ Creates `.wrapper/` directory with template files:
 - `repo.yaml` - Repository constraints
 - `config.yaml` - LLM configuration
 
-**Note:** All files are created with detailed templates and examples. The templates show the expected format and structure for each file.
-
 ### `wrapper propose`
 
 Uses LLM to propose the next `step.yaml` based on:
-- Current architecture
-- Completed steps
+- Target architecture (from `architecture.md`)
+- **Actual repository state** (from `baseline_snapshot.json`)
+- **Known deviations** (from `deviations.yaml`)
+- Completed steps history
 - External repo state
 
-First step is always a verification step.
+First step is always a verification step to establish baseline.
 
 ### `wrapper compile`
 
 Generates from `step.yaml`:
-- `copilot_prompt.txt` - Strict prompt to paste into Copilot
+- `copilot_prompt.txt` - Strict prompt to paste into AI assistant
+- `copilot_output.txt` - Template file for AI's response (paste AI output here)
 - `verify.md` - Human-readable checklist
+
+**Important:** After getting AI's response, paste it into `copilot_output.txt` before running `verify`.
 
 ### `wrapper verify [--staged]`
 
-Checks git diff against step constraints:
+Checks git diff AND AI output against step constraints:
 - Verifies only allowed files changed
 - Checks for forbidden patterns
-- Runs LLM analysis
+- Uses `copilot_output.txt` for verification steps with no code changes
+- Runs LLM analysis on both diff and output
 - Generates `repair_prompt.txt` on failure
+
+**First-time magic (when no steps completed yet):**
+- Automatically captures `baseline_snapshot.json` (repo structure/files)
+- Automatically generates `deviations.yaml` (architecture vs actual mismatches)
+- Sets up baseline for all future steps
 
 Options:
 - `--staged` - Check only staged changes (default: all uncommitted)
@@ -129,35 +126,81 @@ Records completed step in state. Only works after `verify` passes.
 Syncs external_state.json from other repos. This is the ONLY way to populate external_state.json.
 
 ```bash
-# Sync from one or more sibling repos
-wrapper sync-external --from ../ui --from ../api --from ../llm
+# From your current repo, sync state from sibling repos
+wrapper sync-external --from ../ui --from ../llm
 ```
 
-**What it does:**
-- Reads `.wrapper/state.json` from each specified repo
-- Extracts `done_steps` summaries and `invariants`
-- Aggregates ALL repos into a single `external_state.json` file
-- Does NOT scan source code or infer anything
+Extracts from each repo's `.wrapper/state.json`:
+- `done_steps` summaries
+- `invariants`
 
-**Use case:** If your repo depends on other repos (declared in `repo.yaml`), sync their state so the LLM knows what's been completed in those repos. The tool will block feature work if dependencies aren't baseline verified.
+Does NOT scan source code or infer anything.
+
+### `wrapper snapshot`
+
+Manually capture baseline snapshot of repository.
+
+**Usually not needed** - automatically captured on first `wrapper verify`.
+
+Scans repository and creates `baseline_snapshot.json` with:
+- Complete file tree
+- Directory structure
+- File counts by type (.ts, .py, etc.)
+- Presence of key files (package.json, Dockerfile, etc.)
+- Git status (branch, last commit)
+
+### `wrapper diff-baseline`
+
+Compare current repository state against baseline snapshot.
+
+Shows drift from verified baseline:
+- New/removed files
+- New/removed directories  
+- File type count changes
+- Structural changes
+
+Useful for detecting unexpected modifications or growth.
 
 ## File Structure
 
 ```
 your-repo/
 ├── .wrapper/
-│   ├── architecture.md      # [Human] Target architecture
-│   ├── repo.yaml           # [Human] Repo constraints
-│   ├── config.yaml         # [Human] LLM config
-│   ├── step.yaml           # [Proposed/Edited] Current step
-│   ├── state.json          # [Auto] Execution state
-│   ├── external_state.json # [sync-external] Other repos state (READ-ONLY for Copilot)
-│   ├── copilot_prompt.txt  # [Generated] Copilot prompt
-│   ├── verify.md           # [Generated] Verification checklist
-│   ├── diff.txt            # [Generated] Last git diff
-│   └── repair_prompt.txt   # [Generated] On verification failure
+│   # === Manual Setup (edit once) ===
+│   ├── architecture.md       # [Human] Target architecture description
+│   ├── repo.yaml            # [Human] Repository role and constraints
+│   ├── config.yaml          # [Human] LLM API configuration
+│   
+│   # === Per-Step Workflow (regenerated each step) ===
+│   ├── step.yaml            # [LLM→Human] Proposed step (review/edit before compile)
+│   ├── copilot_prompt.txt   # [Generated] Prompt for AI assistant
+│   ├── copilot_output.txt   # [Template] Paste AI's response here
+│   ├── verify.md            # [Generated] Human-readable checklist
+│   ├── diff.txt             # [Generated] Last git diff analyzed
+│   ├── repair_prompt.txt    # [Generated] Fix instructions (on failure)
+│   
+│   # === Persistent State (append-only) ===
+│   ├── state.json           # [Auto] All completed steps + invariants
+│   ├── baseline_snapshot.json # [Auto] Repository structure at baseline
+│   ├── deviations.yaml      # [Auto] Known architecture mismatches
+│   └── external_state.json  # [Synced] Other repos' state
+│   
 └── ... your code ...
 ```
+
+### File Lifecycle
+
+| File | Created By | Updated When | Purpose |
+|------|------------|--------------|---------|
+| **architecture.md** | `init` | Manual once | Define target state |
+| **repo.yaml** | `init` | Manual once | Define boundaries |
+| **config.yaml** | `init` | Manual once | API keys |
+| **step.yaml** | `propose` | Each step | Current step plan |
+| **copilot_prompt.txt** | `compile` | Each step | AI assistant input |
+| **copilot_output.txt** | `compile` | Each step (you paste) | AI assistant output |
+| **state.json** | First run | `accept` | Append-only history |
+| **baseline_snapshot.json** | First `verify` | Never (permanent baseline) | Repo structure snapshot |
+| **deviations.yaml** | First `verify` | As deviations resolve | Architecture gaps |
 
 ## Configuration
 
@@ -165,24 +208,11 @@ your-repo/
 
 Environment variables (take precedence):
 ```bash
-# Linux/macOS:
 export DEEPSEEK_API_KEY="your-key"
 # or
 export OPENAI_API_KEY="your-key"
 # or
 export ANTHROPIC_API_KEY="your-key"
-
-# Windows PowerShell:
-$env:DEEPSEEK_API_KEY="your-key"
-# or
-$env:OPENAI_API_KEY="your-key"
-# or
-$env:ANTHROPIC_API_KEY="your-key"
-```
-
-**Note:** Environment variables set with `$env:` in PowerShell only last for the current session. To make them permanent, use:
-```powershell
-[System.Environment]::SetEnvironmentVariable('DEEPSEEK_API_KEY', 'your-key', 'User')
 ```
 
 Or in `.wrapper/config.yaml`:
@@ -232,66 +262,113 @@ success_criteria:
   - No async operations in state logic
 ```
 
+## Key Features
+
+### 🎯 Automatic Baseline Capture
+
+On first `wrapper verify`:
+- Scans your entire repository
+- Creates `baseline_snapshot.json` with complete file/directory structure
+- LLM analyzes target architecture vs actual state
+- Auto-generates `deviations.yaml` listing all mismatches
+- **Zero manual work** - happens automatically!
+
+### 📋 AI Output Verification
+
+Not just code changes - verifies AI's analysis too:
+- For verification steps: AI analyzes repo, you paste output
+- For implementation steps: AI describes changes made
+- `wrapper verify` checks both git diff AND AI's explanation
+- Ensures AI understood the constraints correctly
+
+### 🔍 Deviation Tracking
+
+Structured tracking of reality vs target:
+```yaml
+deviations:
+  - id: missing-tests-directory
+    description: tests/ doesn't exist but architecture requires it
+    severity: high
+    expected: tests/ with unit and integration subdirectories
+    actual: No tests directory found
+    resolution_step: null  # Filled when addressed
+```
+
+### 📊 Context-Aware Proposals
+
+LLM gets concrete context when proposing steps:
+- "Your repo has 47 files across 12 directories"
+- "src/routes/ contains api.ts, health.ts"
+- "Known deviation: missing tests/ directory"
+- Results in specific, actionable step proposals
+
 ## Multi-Repo Usage
 
-Each repo has its own `.wrapper/` directory and operates independently.
+Each repo has its own `.wrapper/` directory.
 
-### Sharing State Between Repos
+Use `external_state.json` to share awareness:
 
-When you have multiple repos that depend on each other, use `sync-external` to share state:
-
-1. **In each dependency repo**, run `wrapper init` and complete baseline verification
-2. **In your current repo**, sync their state:
-   ```bash
-   wrapper sync-external --from ../ui --from ../api --from ../llm
-   ```
-
-3. This creates `.wrapper/external_state.json` with aggregated info:
-   ```json
-   {
-     "ui": {
-       "done_steps": ["baseline-verification: verification completed"],
-       "invariants": ["All components are TypeScript", "Redux for state management"]
-     },
-     "api": {
-       "done_steps": ["baseline-verification: verification completed"],
-       "invariants": ["RESTful endpoints only", "JWT authentication"]
-     },
-     "llm": {
-       "done_steps": ["baseline-verification: verification completed"],
-       "invariants": ["DeepSeek client configured"]
-     }
-   }
-   ```
-
-4. **The LLM uses this** when proposing steps:
-   - Checks if dependencies are baseline verified
-   - Blocks feature work until dependencies are clean
-   - Prevents cross-repo coupling issues
-
-### Example Workflow
-
-```bash
-# In repo A (ui)
-cd ../ui
-wrapper init
-wrapper propose  # Creates baseline verification step
-# ... verify and accept ...
-
-# In repo B (api) - depends on ui
-cd ../api
-wrapper init
-wrapper sync-external --from ../ui  # Get ui's state
-wrapper propose  # LLM sees ui is verified, proposes appropriate step
+```json
+{
+  "ui": {
+    "status": "baseline_verified",
+    "known_endpoints": ["POST /jobs", "GET /jobs/:id"]
+  },
+  "llm": {
+    "status": "baseline_verified",
+    "models": ["deepseek-chat"]
+  }
+}
 ```
+
+## Key Features
+
+### 🎯 Automatic Baseline Capture
+
+On first `wrapper verify`:
+- Scans your entire repository
+- Creates `baseline_snapshot.json` with complete file/directory structure
+- LLM analyzes target architecture vs actual state
+- Auto-generates `deviations.yaml` listing all mismatches
+- **Zero manual work** - happens automatically!
+
+### 📋 AI Output Verification
+
+Not just code changes - verifies AI's analysis too:
+- For verification steps: AI analyzes repo, you paste output
+- For implementation steps: AI describes changes made
+- `wrapper verify` checks both git diff AND AI's explanation
+- Ensures AI understood the constraints correctly
+
+### 🔍 Deviation Tracking
+
+Structured tracking of reality vs target:
+```yaml
+deviations:
+  - id: missing-tests-directory
+    description: tests/ doesn't exist but architecture requires it
+    severity: high
+    expected: tests/ with unit and integration subdirectories
+    actual: No tests directory found
+    resolution_step: null  # Filled when addressed
+```
+
+### 📊 Context-Aware Proposals
+
+LLM gets concrete context when proposing steps:
+- "Your repo has 47 files across 12 directories"
+- "src/routes/ contains api.ts, health.ts"
+- "Known deviation: missing tests/ directory"
+- Results in specific, actionable step proposals
 
 ## Philosophy
 
 This tool exists to **enforce discipline, not intelligence**.
 
-- Copilot is powerful but implicit
+- AI assistants are powerful but implicit
 - This tool makes constraints explicit
-- Every change is verified against architecture
+- Captures reality, not just ideals
+- Every change verified against architecture AND baseline
 - State is append-only and auditable
 - Human reviews and approves everything
 
@@ -309,16 +386,28 @@ Run `git init` first. The tool requires git for diff checking.
 
 Run `wrapper propose` first, or create manually.
 
+### "Verification step requires Copilot output"
+
+For verification-only steps with no code changes:
+1. Check `.wrapper/copilot_output.txt` 
+2. Paste the AI's analysis into that file
+3. Run `wrapper verify` again
+
 ### Verification keeps failing
 
 Check `repair_prompt.txt` for specific issues. Common causes:
 - Modified files not in `allowed_files`
 - Forbidden patterns detected in diff
 - New directories created unexpectedly
+- AI output missing or incomplete
 
-## Contributing
+### Want to see what changed from baseline?
 
-Issues and pull requests welcome!
+```bash
+wrapper diff-baseline
+```
+
+Shows all files/directories added or removed since baseline was captured.
 
 ## License
 

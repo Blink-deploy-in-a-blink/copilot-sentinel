@@ -17,6 +17,9 @@ from wrapper.core.paths import (
     STATE_FILE,
     EXTERNAL_STATE_FILE,
     CONFIG_FILE,
+    BASELINE_SNAPSHOT_FILE,
+    DEVIATIONS_FILE,
+    COPILOT_OUTPUT_FILE,
 )
 
 
@@ -59,7 +62,7 @@ def save_yaml_file(filepath: Path, data: dict) -> None:
 def save_json_file(filepath: Path, data: dict) -> None:
     """Save data to a JSON file."""
     ensure_wrapper_dir()
-    content = json.dumps(data, indent=2)
+    content = json.dumps(data, indent=2, ensure_ascii=False)
     filepath.write_text(content, encoding='utf-8')
 
 
@@ -153,3 +156,35 @@ def add_done_step(step_id: str, result: str) -> None:
     })
     state["last_verified"] = datetime.now().isoformat()
     save_state(state)
+
+
+# New file loaders/savers for baseline and deviations
+
+def load_baseline_snapshot() -> Optional[dict]:
+    """Load baseline_snapshot.json if exists."""
+    return load_json_file(get_file_path(BASELINE_SNAPSHOT_FILE))
+
+
+def save_baseline_snapshot(snapshot: dict) -> None:
+    """Save baseline_snapshot.json."""
+    save_json_file(get_file_path(BASELINE_SNAPSHOT_FILE), snapshot)
+
+
+def load_deviations() -> Optional[dict]:
+    """Load deviations.yaml if exists."""
+    return load_yaml_file(get_file_path(DEVIATIONS_FILE))
+
+
+def save_deviations(deviations: dict) -> None:
+    """Save deviations.yaml."""
+    save_yaml_file(get_file_path(DEVIATIONS_FILE), deviations)
+
+
+def load_copilot_output() -> Optional[str]:
+    """Load copilot_output.txt content."""
+    return load_text_file(get_file_path(COPILOT_OUTPUT_FILE))
+
+
+def save_copilot_output(content: str) -> None:
+    """Save copilot_output.txt."""
+    save_text_file(get_file_path(COPILOT_OUTPUT_FILE), content)

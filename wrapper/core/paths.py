@@ -16,9 +16,12 @@ STEP_YAML_FILE = "step.yaml"
 STATE_FILE = "state.json"
 EXTERNAL_STATE_FILE = "external_state.json"
 CONFIG_FILE = "config.yaml"
+BASELINE_SNAPSHOT_FILE = "baseline_snapshot.json"
+DEVIATIONS_FILE = "deviations.yaml"
 
 # Machine-generated output files
 COPILOT_PROMPT_FILE = "copilot_prompt.txt"
+COPILOT_OUTPUT_FILE = "copilot_output.txt"
 VERIFY_FILE = "verify.md"
 REPAIR_PROMPT_FILE = "repair_prompt.txt"
 DIFF_FILE = "diff.txt"
