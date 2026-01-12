@@ -183,6 +183,7 @@ STEP:
 CONSTRAINTS:
 Allowed files:
 {allowed_str}
+(Note: Files in .wrapper/ directory are always allowed and should be ignored in verification)
 
 Forbidden:
 {forbidden_str}
@@ -202,6 +203,12 @@ ANALYSIS REQUIRED:
 2. Identify any architectural violations
 3. Check if success criteria can be verified from the diff
 4. Flag any concerning patterns
+
+IMPORTANT NOTES:
+- Files in .wrapper/ directory are ALLOWED to change (they are metadata, not code)
+- If the AI assistant created files in .wrapper/ (like analysis docs), IGNORE THEM
+- Only check for violations in the actual codebase (not .wrapper/)
+- Focus on whether the AI followed the allowed_files constraint for CODE files
 
 OUTPUT FORMAT:
 ```

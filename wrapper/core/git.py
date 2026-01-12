@@ -19,6 +19,8 @@ def run_git_command(args: List[str]) -> str:
             ["git"] + args,
             capture_output=True,
             text=True,
+            encoding='utf-8',
+            errors='replace',  # Replace invalid UTF-8 chars instead of crashing
             check=True
         )
         return result.stdout
@@ -28,20 +30,26 @@ def run_git_command(args: List[str]) -> str:
         raise RuntimeError("Git not found. Please install git.")
 
 
-def get_diff(staged_only: bool = False) -> str:
+def get_diff(staged_only: bool = False, exclude_wrapper: bool = True) -> str:
     """
     Get git diff.
     
     Args:
         staged_only: If True, only staged changes. Otherwise all uncommitted.
+        exclude_wrapper: If True, excludes .wrapper/ directory from diff.
     
     Returns:
         Diff output as string
     """
     if staged_only:
-        return run_git_command(["diff", "--cached"])
+        cmd = ["diff", "--cached"]
     else:
-        return run_git_command(["diff", "HEAD"])
+        cmd = ["diff", "HEAD"]
+    
+    if exclude_wrapper:
+        cmd.extend(["--", ".", ":(exclude).wrapper"])
+    
+    return run_git_command(cmd)
 
 
 def get_changed_files(staged_only: bool = False) -> Set[str]:

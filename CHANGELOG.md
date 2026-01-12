@@ -5,6 +5,16 @@ All notable changes to Copilot Sentinel will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [Unreleased]
+
+## [1.0.1] - 2026-01-12
+
+### Fixed
+- Git diff operations now use UTF-8 encoding explicitly (prevents Windows charmap decode errors)
+- Git diff now excludes `.wrapper/` directory by default (prevents false verification failures)
+- LLM verification prompt explicitly instructs to ignore `.wrapper/` file operations
+- Verification no longer flags `.wrapper/` metadata file creation as constraint violation
+
 ## [1.0.0] - 2026-01-11
 
 ### Added
