@@ -323,7 +323,7 @@ Proposed Step:
 
 ## Version
 
-Current: **v1.0.0**
+Current: **v1.0.4**
 
 See [CHANGELOG.md](CHANGELOG.md) for version history.  
 See [VERSIONING.md](VERSIONING.md) for release process.
