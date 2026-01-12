@@ -7,6 +7,18 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [1.0.2] - 2026-01-12
+
+### Fixed
+- Propose now enforces max 2 verification steps before requiring implementation/cleanup
+- Propose explicitly shows verification step count to LLM to prevent endless verification loops
+- Compile prompt now instructs AI NOT to create documentation files in .wrapper/
+- Verification analysis now outputs directly to copilot_output.txt instead of creating files
+
+### Changed
+- Verification step limit prominently displayed in propose prompt
+- Template prompts updated to discourage file creation for verification steps
+
 ## [1.0.1] - 2026-01-12
 
 ### Fixed

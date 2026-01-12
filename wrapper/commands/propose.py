@@ -49,6 +49,9 @@ def build_propose_prompt(
         f"- {s['step_id']}: {s['result']}" for s in done_steps
     )
     
+    # Count verification steps (step_id starts with "verify-")
+    verification_count = sum(1 for s in done_steps if s.get('step_id', '').startswith('verify-'))
+    
     external_summary = "None configured"
     has_dependencies = False
     if external_state:
@@ -181,9 +184,11 @@ CRITICAL RULES - READ FIRST:
 3. NEVER propose features if baseline not verified
 4. PREFER smaller steps over larger ones
 5. PREFER cleanup over new features
-6. PREFER verification over implementation
-7. If dependencies exist and are unverified, BLOCK feature work
-8. If dependencies have BLOCKERS, STOP ALL WORK and propose blocker documentation
+6. MAX 2 VERIFICATION STEPS TOTAL (baseline + optional deep analysis)
+7. After baseline verified, move to IMPLEMENTATION/CLEANUP steps
+8. DO NOT create separate verification steps for each deviation
+9. If dependencies exist and are unverified, BLOCK feature work
+10. If dependencies have BLOCKERS, STOP ALL WORK and propose blocker documentation
 
 {blocker_warning}
 
@@ -201,6 +206,9 @@ REPO CONFIGURATION:
 
 COMPLETED STEPS:
 {done_summary}
+
+VERIFICATION STEPS COMPLETED: {verification_count}
+⚠️  RULE: MAX 2 verification steps allowed. If {verification_count} >= 2, MUST propose implementation/cleanup, NOT verification.
 
 INVARIANTS ESTABLISHED:
 {", ".join(state.get("invariants", [])) or "None yet"}
@@ -231,15 +239,18 @@ success_criteria:
 
 STEP PROPOSAL RULES (STRICT):
 1. If no steps done yet → MUST be type: verification (baseline check)
-2. If baseline not clean → MUST be type: verification or cleanup
-3. If dependencies unverified → MUST be verification, NOT features
-4. If dependencies have BLOCKERS → MUST propose "blocked" step telling user to fix dependency repo
-5. Each step touches AT MOST 3 files
-6. Each step has AT MOST 3 success criteria
-7. forbidden list MUST include all repo-level must_not items
-7. NEVER touch files in other repos
-8. NEVER add new directories without explicit architecture approval
-9. When uncertain → propose verification to gather information
+2. If only 1-2 verification steps done → CAN do one more verification IF complex analysis needed
+3. If 2+ verification steps done → MUST move to implementation/cleanup (NO MORE VERIFICATION)
+4. If baseline not clean → propose implementation/cleanup to FIX deviations
+5. If dependencies unverified → MUST be verification, NOT features
+6. If dependencies have BLOCKERS → MUST propose "blocked" step telling user to fix dependency repo
+7. Each step touches AT MOST 3 files
+8. Each step has AT MOST 3 success criteria
+9. forbidden list MUST include all repo-level must_not items
+10. NEVER touch files in other repos
+11. NEVER add new directories without explicit architecture approval
+12. When uncertain AND <2 verification steps done → propose verification to gather information
+13. When uncertain AND 2+ verification steps done → propose small cleanup/implementation step
 
 CONSERVATIVE STEP PREFERENCE ORDER:
 1. Verification (check current state matches architecture)

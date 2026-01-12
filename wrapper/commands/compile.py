@@ -103,6 +103,12 @@ FORBIDDEN ACTIONS:
 SUCCESS CRITERIA:
 {success_str}
 
+IMPORTANT FOR VERIFICATION STEPS:
+- DO NOT create analysis files (like .wrapper/analysis.md)
+- Output your analysis directly in your response text
+- The user will paste your response into copilot_output.txt
+- No need for persistent documentation files
+
 OUTPUT REQUIREMENTS:
 Generate a Copilot prompt with this EXACT structure (no markdown, no code fences):
 
@@ -114,6 +120,8 @@ This is the [REPO_NAME] repo.
 RULES (NON-NEGOTIABLE):
 - You may ONLY modify the files listed below
 - You may NOT refactor, move files, or add structure
+- You must document findings, not implement missing functionality
+- DO NOT create documentation files (output analysis in your response text)
 [Add any other critical rules]
 
 ALLOWED FILES:
