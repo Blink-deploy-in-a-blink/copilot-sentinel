@@ -7,6 +7,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [1.0.4] - 2026-01-12
+
+### Fixed
+- Propose now explicitly blocks creation of documentation/deviation report files
+- Added reminder that deviations are already in .wrapper/deviations.yaml
+- Strengthened rule to propose FIXES after verification, not more documentation
+- Added critical reminders section to prevent duplicate analysis steps
+
 ## [1.0.3] - 2026-01-12
 
 ### Fixed

@@ -253,12 +253,20 @@ STEP PROPOSAL RULES (STRICT):
 13. When uncertain AND 2+ verification steps done → propose small cleanup/implementation step
 14. **VERIFICATION STEPS**: allowed_files should list files to READ/ANALYZE ONLY (no file creation)
 15. **IMPLEMENTATION STEPS**: allowed_files lists files to MODIFY/CREATE
+16. **NEVER propose steps that create documentation files** (deviations already in .wrapper/deviations.yaml)
+17. **After verification, propose FIXES not more documentation**
 
 CONSERVATIVE STEP PREFERENCE ORDER:
-1. Verification (check current state matches architecture)
-2. Cleanup (remove violations, fix existing issues)
+1. Verification (check current state matches architecture) - MAX 2 TOTAL
+2. Cleanup (remove violations, fix existing issues) - PREFERRED after verification
 3. Refactor (improve structure without new features)
 4. Implementation (new features - ONLY if 1-3 not needed)
+
+CRITICAL REMINDERS:
+- Deviations are already documented in .wrapper/deviations.yaml
+- Do NOT propose steps that create more deviation reports or analysis documents
+- Propose steps that FIX deviations, not document them again
+- If {verification_count} >= 2, propose implementation/cleanup to fix actual code
 
 Propose the next logical step:'''
 
