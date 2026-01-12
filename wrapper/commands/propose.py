@@ -251,6 +251,8 @@ STEP PROPOSAL RULES (STRICT):
 11. NEVER add new directories without explicit architecture approval
 12. When uncertain AND <2 verification steps done → propose verification to gather information
 13. When uncertain AND 2+ verification steps done → propose small cleanup/implementation step
+14. **VERIFICATION STEPS**: allowed_files should list files to READ/ANALYZE ONLY (no file creation)
+15. **IMPLEMENTATION STEPS**: allowed_files lists files to MODIFY/CREATE
 
 CONSERVATIVE STEP PREFERENCE ORDER:
 1. Verification (check current state matches architecture)

@@ -118,13 +118,13 @@ This is the [REPO_NAME] repo.
 [Brief role description]
 
 RULES (NON-NEGOTIABLE):
-- You may ONLY modify the files listed below
+- You may ONLY {("read and analyze" if step.get("type") == "verification" else "modify")} the files listed below
 - You may NOT refactor, move files, or add structure
-- You must document findings, not implement missing functionality
+{"- You must analyze and report findings, NOT create files" if step.get("type") == "verification" else "- You must implement the changes described in TASK"}
 - DO NOT create documentation files (output analysis in your response text)
 [Add any other critical rules]
 
-ALLOWED FILES:
+ALLOWED FILES {"(READ-ONLY - for analysis)" if step.get("type") == "verification" else "(can be modified)"}:
 [List each file]
 
 FORBIDDEN:
@@ -133,7 +133,7 @@ FORBIDDEN:
 CURRENT STATE:
 [Summarize what has been established]
 
-TASK:
+TASK {"(ANALYZE ONLY - do NOT create/modify files)" if step.get("type") == "verification" else "(IMPLEMENT changes)"}:
 [Clear, imperative description of what to do]
 
 SUCCESS:

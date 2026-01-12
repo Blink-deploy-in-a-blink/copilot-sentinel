@@ -7,6 +7,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [1.0.3] - 2026-01-12
+
+### Fixed
+- Compile template now explicitly marks verification step files as "READ-ONLY - for analysis"
+- Verification prompts now say "ANALYZE ONLY - do NOT create/modify files"
+- Propose rules clarified: verification steps analyze files, implementation steps modify files
+- Removed contradictory instructions about file creation in verification steps
+
 ## [1.0.2] - 2026-01-12
 
 ### Fixed
