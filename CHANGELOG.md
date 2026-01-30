@@ -7,6 +7,67 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [1.2.0] - 2026-01-30
+
+### Added
+- **Feature Testing System** (`wrapper test`)
+  - Test completed features against implementation plan
+  - Interactive menu to test phases, steps, or all work
+  - LLM analyzes actual code files for logic bugs
+  - Verifies features, requirements, and security
+  - Only tests completed steps (plan-aware)
+- **Implementation Tracking** in `wrapper accept`
+  - Captures files changed automatically from git diff
+  - Prompts for optional implementation notes
+  - Stores in implementation plan for testing reference
+- **Direct Step Testing** (`wrapper test --step <step-id>`)
+  - Test specific step by ID
+  - Useful for CI/CD integration
+
+### Changed
+- `wrapper accept` now captures implementation metadata
+- Implementation plan tracks `files_changed` and `implementation_notes` per step
+
+### Fixed
+- None
+
+## [1.1.0] - 2026-01-30
+
+### Added
+- **Interactive Planning System** (`wrapper plan init`)
+  - High-level phase breakdown with LLM assistance
+  - Detailed step planning with features and requirements
+  - Non-functional requirements templates (security, performance, cost)
+  - User can refine phases (reorder, merge, split)
+  - Captures planning context and user preferences
+- **Plan-Driven Propose** (`wrapper propose --from-plan`)
+  - Automatically reads next step from implementation plan
+  - Generates step.yaml with features and requirements
+  - Tracks plan progress
+  - Falls back to legacy mode with `--no-plan` flag
+- **Logic Verification** (`wrapper verify --check-logic`)
+  - Verifies features checklist against git diff
+  - Checks non-functional requirements (security, performance, cost)
+  - Detects missing or incomplete implementations
+  - Identifies logic errors
+- **Plan Progress Tracking**
+  - `wrapper plan status` - Show completion percentage
+  - `wrapper plan show` - Visual plan tree
+  - Plan updated automatically on `wrapper accept`
+- **Enhanced Prompts**
+  - copilot_prompt.txt now includes non-functional requirements
+  - Security requirements marked as NON-NEGOTIABLE
+  - Performance and cost optimization guidance included
+
+### Changed
+- `wrapper propose` now checks for implementation plan by default
+- `wrapper verify` automatically runs logic verification if features present
+- `wrapper accept` updates implementation plan progress
+- `wrapper compile` includes non-functional requirements in prompts
+
+### Fixed
+- None
+
 ## [1.0.5] - 2026-01-12
 
 ### Fixed

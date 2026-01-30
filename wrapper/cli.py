@@ -21,6 +21,8 @@ from wrapper.commands.init import cmd_init
 from wrapper.commands.sync_external import cmd_sync_external
 from wrapper.commands.snapshot import cmd_snapshot
 from wrapper.commands.diff_baseline import cmd_diff_baseline
+from wrapper.commands.plan import cmd_plan_init, cmd_plan_status, cmd_plan_show
+from wrapper.commands.test import cmd_test
 
 
 def get_version():
@@ -50,6 +52,12 @@ def main():
 
     # propose command
     propose_parser = subparsers.add_parser("propose", help="Propose next step.yaml")
+    propose_parser.add_argument(
+        "--no-plan",
+        action="store_false",
+        dest="from_plan",
+        help="Ignore implementation plan if it exists"
+    )
     propose_parser.set_defaults(func=cmd_propose)
 
     # compile command
@@ -62,6 +70,11 @@ def main():
         "--staged",
         action="store_true",
         help="Check only staged changes (default: all uncommitted)"
+    )
+    verify_parser.add_argument(
+        "--check-logic",
+        action="store_true",
+        help="Verify implementation logic against features checklist"
     )
     verify_parser.set_defaults(func=cmd_verify)
 
@@ -97,6 +110,37 @@ def main():
         help="Compare current repo state against baseline snapshot"
     )
     diff_baseline_parser.set_defaults(func=cmd_diff_baseline)
+
+    # plan command (NEW)
+    plan_parser = subparsers.add_parser("plan", help="Interactive implementation planning")
+    plan_subparsers = plan_parser.add_subparsers(dest="plan_command")
+    
+    # plan init
+    plan_init_parser = plan_subparsers.add_parser("init", help="Create implementation plan interactively")
+    plan_init_parser.set_defaults(func=cmd_plan_init)
+    
+    # plan status
+    plan_status_parser = plan_subparsers.add_parser("status", help="Show plan progress")
+    plan_status_parser.set_defaults(func=cmd_plan_status)
+    
+    # plan show
+    plan_show_parser = plan_subparsers.add_parser("show", help="Show plan visualization")
+    plan_show_parser.set_defaults(func=cmd_plan_show)
+    
+    # Default to status if just "wrapper plan"
+    plan_parser.set_defaults(func=cmd_plan_status)
+
+    # test command (NEW)
+    test_parser = subparsers.add_parser(
+        "test",
+        help="Test implemented features against plan"
+    )
+    test_parser.add_argument(
+        "--step",
+        help="Test specific step by ID",
+        type=str
+    )
+    test_parser.set_defaults(func=cmd_test)
 
     args = parser.parse_args()
     

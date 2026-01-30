@@ -10,10 +10,86 @@ from wrapper.core.files import (
     load_step_yaml,
     load_baseline_snapshot,
     load_deviations,
+    load_implementation_plan,
     save_step_yaml,
 )
 from wrapper.core.paths import get_file_path, STEP_YAML_FILE, ARCHITECTURE_FILE, REPO_YAML_FILE
 from wrapper.core.llm import get_llm_client
+
+
+def get_next_step_from_plan(plan: dict, state: dict) -> dict | None:
+    """
+    Find the next uncompleted step in the implementation plan.
+    
+    Returns step dict or None if plan is complete.
+    """
+    done_step_ids = {s['step_id'] for s in state.get('done_steps', [])}
+    
+    for phase in plan.get("phases", []):
+        for step in phase.get("steps", []):
+            step_id = step.get('step_id')
+            if step_id and step_id not in done_step_ids:
+                # Found next step
+                return step
+    
+    # All steps complete
+    return None
+
+
+def propose_from_plan(plan_step: dict, architecture: str, repo_yaml: dict) -> bool:
+    """
+    Generate step.yaml from a plan step template.
+    
+    Args:
+        plan_step: Step from implementation_plan.yaml
+        architecture: Architecture content
+        repo_yaml: Repo config
+    
+    Returns:
+        True on success
+    """
+    print(f"Generating step from plan: {plan_step.get('name')}")
+    
+    # Build step.yaml from plan template
+    step_yaml = {
+        'step_id': plan_step.get('step_id'),
+        'type': 'implementation',  # Most steps are implementation
+        'repo': repo_yaml.get('repo_name', 'unknown'),
+        'goal': plan_step.get('scope', ''),
+        'allowed_files': plan_step.get('files_to_modify', []),
+        'features': plan_step.get('features', []),
+        'forbidden': list(repo_yaml.get('must_not', [])),
+        'success_criteria': plan_step.get('features', []),  # Features = success criteria
+    }
+    
+    # Add non-functional requirements if present
+    requirements = plan_step.get('requirements', {})
+    if requirements:
+        step_yaml['requirements'] = requirements
+    
+    # Save step.yaml
+    save_step_yaml(step_yaml)
+    
+    print()
+    print(f"Step generated: {get_file_path(STEP_YAML_FILE)}")
+    print(f"  Type: {step_yaml['type']}")
+    print(f"  Goal: {step_yaml['goal'][:100]}...")
+    print(f"  Files: {len(step_yaml['allowed_files'])}")
+    print(f"  Features: {len(step_yaml['features'])}")
+    
+    if requirements:
+        print(f"  Non-functional requirements:")
+        if requirements.get('security'):
+            print(f"    🔒 Security: {len(requirements['security'])} requirement(s)")
+        if requirements.get('performance'):
+            print(f"    ⚡ Performance: {requirements.get('performance')}")
+        if requirements.get('cost'):
+            print(f"    💰 Cost: {len(requirements.get('cost', []))} optimization(s)")
+    
+    print()
+    print("Next: wrapper compile")
+    
+    return True
 
 
 def check_required_files() -> bool:
@@ -283,6 +359,47 @@ def cmd_propose(args) -> bool:
     architecture = load_architecture()
     repo_yaml = load_repo_yaml()
     state = load_state()
+    
+    # NEW: Check for implementation plan first
+    plan = load_implementation_plan()
+    from_plan = getattr(args, 'from_plan', True)  # Default to True if plan exists
+    
+    if plan and from_plan:
+        # Plan-driven mode
+        print("Using implementation plan...")
+        
+        next_step = get_next_step_from_plan(plan, state)
+        
+        if not next_step:
+            print()
+            print("=" * 60)
+            print("🎉 PLAN COMPLETE!")
+            print("=" * 60)
+            print()
+            print("All steps from the implementation plan have been completed.")
+            print()
+            print("Next steps:")
+            print("  - Run 'wrapper plan --status' to review")
+            print("  - Create a new plan with 'wrapper plan init --regenerate'")
+            return True
+        
+        # Check if step.yaml already exists
+        existing_step = load_step_yaml()
+        if existing_step:
+            print(f"Warning: {STEP_YAML_FILE} already exists.")
+            print(f"Current step: {existing_step.get('step_id', 'unknown')}")
+            response = input("Overwrite? [y/N]: ").strip().lower()
+            if response != 'y':
+                print("Aborted.")
+                return False
+        
+        return propose_from_plan(next_step, architecture, repo_yaml)
+    
+    # Legacy mode (no plan or explicitly disabled)
+    if plan and not from_plan:
+        print("Note: Implementation plan exists but --no-plan flag used.")
+        print("Generating step without using plan...")
+    
     external_state = load_external_state()
     baseline = load_baseline_snapshot()
     deviations = load_deviations()

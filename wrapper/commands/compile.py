@@ -50,6 +50,64 @@ def normalize_forbidden_item(item) -> str:
     return str(item)
 
 
+def build_requirements_section(requirements: dict) -> str:
+    """
+    Build non-functional requirements section for prompt.
+    
+    Args:
+        requirements: Dict with security, performance, cost, notes
+    
+    Returns:
+        Formatted requirements section or empty string
+    """
+    if not requirements:
+        return ""
+    
+    lines = ["NON-FUNCTIONAL REQUIREMENTS (CRITICAL):"]
+    
+    # Security requirements
+    security = requirements.get('security')
+    if security:
+        lines.append("\n🔒 SECURITY (NON-NEGOTIABLE):")
+        if isinstance(security, list):
+            for req in security:
+                lines.append(f"  - MUST {req}")
+        else:
+            lines.append(f"  - {security}")
+    
+    # Performance requirements
+    performance = requirements.get('performance')
+    if performance:
+        lines.append("\n⚡ PERFORMANCE:")
+        if isinstance(performance, dict):
+            if 'latency_target_ms' in performance:
+                lines.append(f"  - Target latency: <{performance['latency_target_ms']}ms")
+            if 'cache_ttl_seconds' in performance:
+                lines.append(f"  - Cache responses for {performance['cache_ttl_seconds']}s")
+            if 'notes' in performance:
+                lines.append(f"  - {performance['notes']}")
+        else:
+            lines.append(f"  - {performance}")
+    
+    # Cost optimization
+    cost = requirements.get('cost')
+    if cost:
+        lines.append("\n💰 COST OPTIMIZATION:")
+        if isinstance(cost, list):
+            for req in cost:
+                lines.append(f"  - {req}")
+        else:
+            lines.append(f"  - {cost}")
+    
+    # Additional notes
+    notes = requirements.get('notes')
+    if notes:
+        lines.append(f"\n📝 ADDITIONAL REQUIREMENTS:")
+        lines.append(f"  {notes}")
+    
+    return "\n".join(lines)
+
+
 def build_compile_prompt(
     architecture: str,
     repo_yaml: dict,
@@ -72,6 +130,10 @@ def build_compile_prompt(
     
     invariants = state.get("invariants", [])
     invariants_str = "\n".join(f"- {i}" for i in invariants) if invariants else "- None established yet"
+    
+    # NEW: Extract non-functional requirements
+    requirements = step.get("requirements", {})
+    requirements_section = build_requirements_section(requirements)
     
     prompt = f'''Generate a strict Copilot execution prompt based on this step definition.
 
@@ -102,6 +164,8 @@ FORBIDDEN ACTIONS:
 
 SUCCESS CRITERIA:
 {success_str}
+
+{requirements_section}
 
 IMPORTANT FOR VERIFICATION STEPS:
 - DO NOT create analysis files (like .wrapper/analysis.md)

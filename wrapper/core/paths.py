@@ -19,6 +19,10 @@ CONFIG_FILE = "config.yaml"
 BASELINE_SNAPSHOT_FILE = "baseline_snapshot.json"
 DEVIATIONS_FILE = "deviations.yaml"
 
+# NEW: Planning files
+IMPLEMENTATION_PLAN_FILE = "implementation_plan.yaml"
+PLANNING_SESSION_FILE = "planning_session.json"
+
 # Machine-generated output files
 COPILOT_PROMPT_FILE = "copilot_prompt.txt"
 COPILOT_OUTPUT_FILE = "copilot_output.txt"

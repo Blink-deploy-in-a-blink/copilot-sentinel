@@ -20,6 +20,8 @@ from wrapper.core.paths import (
     BASELINE_SNAPSHOT_FILE,
     DEVIATIONS_FILE,
     COPILOT_OUTPUT_FILE,
+    IMPLEMENTATION_PLAN_FILE,
+    PLANNING_SESSION_FILE,
 )
 
 
@@ -188,3 +190,25 @@ def load_copilot_output() -> Optional[str]:
 def save_copilot_output(content: str) -> None:
     """Save copilot_output.txt."""
     save_text_file(get_file_path(COPILOT_OUTPUT_FILE), content)
+
+
+# Planning file loaders/savers
+
+def load_implementation_plan() -> Optional[dict]:
+    """Load implementation_plan.yaml if exists."""
+    return load_yaml_file(get_file_path(IMPLEMENTATION_PLAN_FILE))
+
+
+def save_implementation_plan(plan: dict) -> None:
+    """Save implementation_plan.yaml."""
+    save_yaml_file(get_file_path(IMPLEMENTATION_PLAN_FILE), plan)
+
+
+def load_planning_session() -> Optional[dict]:
+    """Load planning_session.json if exists."""
+    return load_json_file(get_file_path(PLANNING_SESSION_FILE))
+
+
+def save_planning_session(session: dict) -> None:
+    """Save planning_session.json."""
+    save_json_file(get_file_path(PLANNING_SESSION_FILE), session)

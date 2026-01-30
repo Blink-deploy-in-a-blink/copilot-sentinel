@@ -8,8 +8,10 @@ from wrapper.core.files import (
     load_state,
     load_step_yaml,
     load_deviations,
+    load_implementation_plan,
     save_state,
     save_deviations,
+    save_implementation_plan,
     add_done_step,
 )
 from wrapper.core.paths import get_file_path, STEP_YAML_FILE
@@ -178,12 +180,44 @@ def cmd_accept(args) -> bool:
             save_state(state)
             print(f"Added {len(success_criteria)} invariants from verification.")
     
+    # NEW: Update implementation plan if exists
+    plan = load_implementation_plan()
+    if plan:
+        # Get git diff to capture files changed
+        from wrapper.core.git import get_changed_files
+        files_changed = list(get_changed_files())
+        
+        # Ask for implementation notes
+        print()
+        print("📝 Implementation Notes (optional)")
+        print("   Add any comments about this implementation:")
+        print("   (Press Enter to skip, or type notes and press Enter)")
+        implementation_notes = input("   > ").strip()
+        
+        updated = mark_step_complete_in_plan(
+            plan, 
+            step_id, 
+            files_changed=files_changed,
+            implementation_notes=implementation_notes or None
+        )
+        if updated:
+            save_implementation_plan(plan)
+            print(f"✓ Updated implementation plan progress")
+            if files_changed:
+                print(f"✓ Captured {len(files_changed)} file(s) changed")
+            if implementation_notes:
+                print(f"✓ Saved implementation notes")
+    
     print()
     print(f"Step '{step_id}' accepted.")
     print()
     print("State updated. You can now:")
     print("  - Run 'wrapper propose' for next step")
-    print("  - Or manually create a new step.yaml")
+    
+    if plan:
+        print("  - Check progress: wrapper plan --status")
+    else:
+        print("  - Or manually create a new step.yaml")
     
     # Show current state summary
     state = load_state()
@@ -191,4 +225,39 @@ def cmd_accept(args) -> bool:
     print(f"Progress: {len(state.get('done_steps', []))} steps completed")
     print(f"Invariants: {len(state.get('invariants', []))}")
     
+    return True
+
+
+def mark_step_complete_in_plan(
+    plan: dict, 
+    step_id: str,
+    files_changed: list = None,
+    implementation_notes: str = None
+) -> bool:
+    """
+    Mark a step as complete in the implementation plan.
+    
+    Args:
+        plan: Implementation plan dict
+        step_id: ID of step to mark complete
+        files_changed: List of files modified in this step
+        implementation_notes: Optional notes about implementation
+    
+    Returns True if step was found and marked, False otherwise.
+    """
+    for phase in plan.get("phases", []):
+        for step in phase.get("steps", []):
+            if step.get('step_id') == step_id:
+                step['completed'] = True
+                step['completed_at'] = datetime.now().isoformat()
+                
+                # Add implementation tracking
+                if files_changed:
+                    step['files_changed'] = [f for f in files_changed if not f.startswith('.wrapper/')]
+                if implementation_notes:
+                    step['implementation_notes'] = implementation_notes
+                
+                return True
+    
+    return False
     return True

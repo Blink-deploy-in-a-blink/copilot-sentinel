@@ -4,15 +4,18 @@
 
 A strict, boring CLI tool that enforces discipline when using GitHub Copilot, Claude, Cursor, or any AI coding assistant.
 
+-  **Interactive Planning** - Build strategic implementation plans with LLM guidance
 -  **Baseline Capture** - Auto-scans your repo, finds architecture violations
--  **Step-by-Step Fixes** - LLM proposes next step to resolve deviations  
+-  **Step-by-Step Fixes** - Execute plan step-by-step with verification  
+-  **Feature Testing** - Test completed features against plan for logic bugs
+-  **Logic Verification** - Checks features are actually implemented correctly
 -  **Strict Verification** - Checks git diff + AI output against constraints
 -  **Cross-Repo Blocking** - Prevents work if dependencies have unresolved issues
--  **Auto-Resolution Tracking** - Knows which steps fix which deviations
+-  **Non-Functional Requirements** - Security, performance, cost requirements in every step
 
 ---
 
-## Quick Start
+## Quick Start (New: With Planning)
 
 ```bash
 # Install
@@ -24,10 +27,32 @@ pip install -e .
 cd your-project
 wrapper init
 
-# Set API key (choose one)
+# Set API key
 export DEEPSEEK_API_KEY="sk-..."      # Linux/Mac
 $env:DEEPSEEK_API_KEY="sk-..."        # Windows
 
+# NEW: Create implementation plan
+wrapper plan init
+# Interactive Q&A to build strategic plan
+# Breaks work into phases and steps
+# Captures security/performance requirements
+
+# Execute plan step-by-step
+wrapper propose --from-plan   # Gets next step from plan
+wrapper compile               # Generate AI prompt
+# ... work with AI ...
+wrapper verify --check-logic  # Verify features implemented
+wrapper accept                # Mark complete, move to next
+
+# Check progress anytime
+wrapper plan status
+```
+
+---
+
+## Quick Start (Legacy: Without Planning)
+
+```bash
 # First run (captures baseline)
 wrapper propose
 wrapper compile
@@ -150,10 +175,17 @@ wrapper propose
 | Command | What It Does |
 |---------|-------------|
 | `wrapper init` | Creates `.wrapper/` directory with templates |
-| `wrapper propose` | Generates next step based on deviations + architecture |
+| `wrapper plan init` | **NEW** Interactive planning - build implementation plan |
+| `wrapper plan status` | **NEW** Show plan progress (X of Y steps complete) |
+| `wrapper plan show` | **NEW** Visualize plan tree |
+| `wrapper propose` | Generates next step (from plan if exists, or from deviations) |
+| `wrapper propose --no-plan` | Ignore plan, generate step from deviations |
 | `wrapper compile` | Creates `copilot_prompt.txt` for AI assistant |
 | `wrapper verify` | Checks git diff + AI output against step constraints |
-| `wrapper accept` | Records completed step, auto-updates deviation resolutions |
+| `wrapper verify --check-logic` | **NEW** Verify features checklist implemented correctly |
+| `wrapper test` | **NEW** Test completed features against plan |
+| `wrapper test --step <id>` | **NEW** Test specific step by ID |
+| `wrapper accept` | Records completed step, updates plan progress |
 | `wrapper sync-external` | Syncs dependency repo states (multi-repo setups) |
 | `wrapper snapshot` | Manual baseline capture (rarely needed) |
 | `wrapper diff-baseline` | Shows drift from baseline (debugging) |
@@ -256,6 +288,47 @@ export ANTHROPIC_API_KEY="sk-..."
 
 ---
 
+## Testing Completed Features
+
+After completing some steps, test your implementation:
+
+```bash
+# Interactive testing menu
+wrapper test
+
+# Choose what to test:
+#   - Test Phase: Authentication (3/3 done)
+#   - Test Phase: Database Layer (1/2 done)
+#   - Test specific step
+#   - Test ALL completed work
+
+# Test specific step directly
+wrapper test --step step-1-remove-flask
+
+# What it does:
+# 1. Reads implementation plan
+# 2. Finds completed steps with features
+# 3. Reads actual code files (files_changed)
+# 4. Sends to LLM: "Does this code implement X correctly?"
+# 5. Reports:
+#    - Feature checklist (✓ CORRECT | ✗ BROKEN | ⚠ INCOMPLETE)
+#    - Logic bugs found
+#    - Security issues
+#    - Recommendations
+```
+
+**When to use `wrapper test`:**
+- After completing a phase (test all steps in phase)
+- Before releasing (test all completed work)
+- When debugging (test specific step)
+- In CI/CD (automate testing with `--step`)
+
+**How it's different from `wrapper verify`:**
+- `verify` = Checks git diff against constraints (during development)
+- `test` = Checks actual code against features (after completion)
+
+---
+
 ## Troubleshooting
 
 **"No LLM API key configured"**
@@ -323,7 +396,7 @@ Proposed Step:
 
 ## Version
 
-Current: **v1.0.4**
+Current: **v1.2.0**
 
 See [CHANGELOG.md](CHANGELOG.md) for version history.  
 See [VERSIONING.md](VERSIONING.md) for release process.

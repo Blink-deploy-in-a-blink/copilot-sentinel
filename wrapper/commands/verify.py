@@ -235,6 +235,97 @@ Analyze now:'''
     return prompt
 
 
+def build_logic_verification_prompt(
+    step: dict,
+    diff: str,
+    requirements: dict
+) -> str:
+    """
+    Build prompt for verifying implementation logic against features.
+    
+    Args:
+        step: Step configuration
+        diff: Git diff
+        requirements: Non-functional requirements from step
+    
+    Returns:
+        LLM prompt for logic verification
+    """
+    features = step.get('features', [])
+    features_str = "\n".join(f"  {i+1}. {f}" for i, f in enumerate(features))
+    
+    # Build requirements section
+    req_section = ""
+    if requirements:
+        req_lines = []
+        
+        if requirements.get('security'):
+            sec_reqs = requirements['security']
+            if isinstance(sec_reqs, list):
+                for req in sec_reqs:
+                    req_lines.append(f"  [SECURITY] {req}")
+        
+        if requirements.get('performance'):
+            perf = requirements['performance']
+            if isinstance(perf, dict):
+                if 'latency_target_ms' in perf:
+                    req_lines.append(f"  [PERFORMANCE] Latency < {perf['latency_target_ms']}ms")
+                if 'cache_ttl_seconds' in perf:
+                    req_lines.append(f"  [PERFORMANCE] Caching enabled ({perf['cache_ttl_seconds']}s TTL)")
+        
+        if requirements.get('cost'):
+            cost_reqs = requirements['cost']
+            if isinstance(cost_reqs, list):
+                for req in cost_reqs:
+                    req_lines.append(f"  [COST] {req}")
+        
+        if req_lines:
+            req_section = "\n\nNON-FUNCTIONAL REQUIREMENTS:\n" + "\n".join(req_lines)
+    
+    prompt = f"""Verify that the implementation correctly implements all required features.
+
+FEATURES THAT MUST BE IMPLEMENTED:
+{features_str}
+{req_section}
+
+IMPLEMENTATION (git diff):
+```
+{diff[:8000]}
+```
+
+VERIFICATION TASK:
+1. Check if EACH feature is implemented correctly
+2. Verify non-functional requirements are met (if any)
+3. Identify any logic errors or missing pieces
+
+OUTPUT FORMAT:
+```
+LOGIC VERIFICATION: PASS or FAIL
+
+FEATURE CHECKLIST:
+1. [Feature name]: ✓ IMPLEMENTED | ✗ MISSING | ⚠ INCOMPLETE
+   Explanation: ...
+2. [Feature name]: ...
+...
+
+NON-FUNCTIONAL REQUIREMENTS:
+- [Requirement]: ✓ MET | ✗ NOT MET
+  Explanation: ...
+
+LOGIC ISSUES:
+- [List any bugs, missing logic, or errors]
+- OR "None found"
+
+VERDICT:
+PASS if all features implemented correctly and no critical issues.
+FAIL otherwise.
+```
+
+Verify now:"""
+    
+    return prompt
+
+
 def build_repair_prompt(
     diff: str,
     step: dict,
@@ -588,6 +679,32 @@ def cmd_verify(args) -> bool:
     except RuntimeError as e:
         print(f"Warning: LLM analysis failed: {e}")
         print("Proceeding with rule-based checks only.")
+    
+    # NEW: Logic verification (if --check-logic flag or features present)
+    check_logic = getattr(args, 'check_logic', False)
+    features = step.get('features', [])
+    requirements = step.get('requirements', {})
+    
+    if (check_logic or features) and has_diff:
+        print("\n🔍 Running logic verification...")
+        try:
+            llm = get_llm_client()
+            logic_prompt = build_logic_verification_prompt(step, diff, requirements)
+            logic_response = llm.generate(logic_prompt, "verifier")
+            
+            print("\nLogic Verification:")
+            print("=" * 60)
+            print(logic_response)
+            print("=" * 60)
+            
+            # Check verdict
+            is_first_verification = len(state.get('done_steps', [])) == 0
+            
+            if "LOGIC VERIFICATION: FAIL" in logic_response.upper() and not is_first_verification:
+                result.add_error("Logic verification failed - missing or incorrect features")
+            
+        except RuntimeError as e:
+            print(f"Warning: Logic verification failed: {e}")
     
     # Special handling for first verification (baseline capture)
     is_first_verification = len(state.get('done_steps', [])) == 0
