@@ -20,27 +20,27 @@ Copilot Sentinel turns AI coding into a disciplined, verifiable process:
 AI assistants generate code. They do not enforce architecture.
 
 **Scenario 1: Architectural violation**
-
+```
 Your architecture.md: "NO HTTP servers (security requirement)"
 Copilot's code: Adds Flask app with @app.route('/api/jobs')
 Code review: Looks fine. Merged.
 Reality: Now you have an unapproved attack surface
-
+```
 
 **Scenario 2: Logic bug in "completed" feature**
-
+```
 Step: "Add authentication check before processing"
 Copilot's code: if not is_authenticated(): return True  # Bug: inverted logic
 Code review: Function exists ✓. Merged.
 Reality: Unauthenticated users get full access
-
+```
 
 **Scenario 3: Cross-repo chaos**
- 
+```
 Service A (agent): Built assuming Service B (UI) has /api/jobs/poll endpoint
 Service B reality: Endpoint doesn't exist yet, marked as HIGH deviation
 Your build: Agent deploys, crashes in production polling non-existent endpoint
- 
+```
 
 **You need guardrails, not just autocomplete.**
 
@@ -62,7 +62,7 @@ Your build: Agent deploys, crashes in production polling non-existent endpoint
 
 ## 60-Second Example
 
- bash
+```bash
 # Install
 git clone https://github.com/Blink-deploy-in-a-blink/copilot-sentinel.git
 cd copilot-sentinel
@@ -91,17 +91,17 @@ wrapper accept                # Mark complete, move to next
 
 # Check progress anytime
 wrapper plan status
- 
+```
 
 **Output (success):**
- 
+```
 ✅ Phase 1: Remove HTTP Server (3/3 steps complete)
 ⏳ Phase 2: Add Polling Mechanism (1/3 steps complete)
    → Next: Implement job poller with 30s interval
- 
+```
 
 **Output (failure - catches violations):**
- 
+```
 ❌ VERIFICATION FAILED — ACCEPT BLOCKED
 
 Step allows modifications to: src/poller.py, src/config.py
@@ -111,13 +111,13 @@ Unauthorized file modified: src/server.py
 Constraint violated: Step does not permit touching server code
 
 → Fix: Revert src/server.py changes, re-run wrapper verify
- 
+```
 
 ---
 
 ## Quick Start (With Planning - Recommended)
 
- bash
+```bash
 # 1. Initialize
 wrapper init
 
@@ -139,13 +139,13 @@ wrapper verify --check-logic  # Verifies features checklist
 wrapper accept                # Updates plan, moves forward
 
 # Repeat step 4 until done
- 
+```
 
 ---
 
 ## Quick Start (Without Planning - Legacy Mode)
 
- bash
+```bash
 # First run (captures baseline)
 wrapper propose
 wrapper compile
@@ -159,7 +159,7 @@ wrapper compile
 # ... work with AI ...
 wrapper verify
 wrapper accept
- 
+```
 
 ---
 
@@ -191,26 +191,26 @@ wrapper accept
 
 **Cross-repo safety:** If dependency repos have unresolved architectural violations, new work is blocked.
 
- bash
+```bash
 # Service A depends on Service B
 cd service-a
 wrapper sync-external --from ../service-b
 wrapper propose
- 
+```
 
 **If Service B is broken:**
- 
+```
 ❌ BLOCKED: service-b has HIGH severity deviation "missing-auth-endpoint"
 Cannot proceed until dependency resolves architectural violation
 
 Step proposed: BLOCKED - waiting for service-b
- 
+```
 
 **After Service B fixes the issue:**
- 
+```
 ✅ All dependencies clean
 Step proposed: Implement authentication flow (uses service-b endpoint)
- 
+```
 
 **This prevents building features on top of broken systems.**
 
@@ -222,6 +222,7 @@ After `wrapper init`, edit these files in `.wrapper/`:
 
 ### `.wrapper/architecture.md` - Your Target Architecture
 
+```markdown
 # Agent Architecture
 
 ## Structure
@@ -233,10 +234,11 @@ After `wrapper init`, edit these files in `.wrapper/`:
 - NO HTTP endpoints (security requirement)
 - NO direct database access (use API)
 - Jobs MUST timeout after 5 minutes
+```
 
 ### `.wrapper/repo.yaml` - Repository Boundaries
 
- yaml
+```yaml
 repo_name: agent
 repo_role: |
   Core execution engine. Polls for jobs, executes them.
@@ -249,14 +251,14 @@ must_not:
 depends_on:
   - repo: ui
     via: polling endpoints
- 
+```
 
 ### `.wrapper/config.yaml` - LLM Provider (Optional)
 
- yaml
+```yaml
 llm_provider: deepseek  # or 'openai' or 'anthropic'
 deepseek_api_key: sk-...  # or set via environment variable
- 
+```
 
 **Supported Providers:**
 - **DeepSeek** (default) - Fast, cheap, good results  
@@ -267,7 +269,7 @@ deepseek_api_key: sk-...  # or set via environment variable
 
 ## File Structure
 
- 
+```
 your-repo/
 ├── .wrapper/
 │   ├── architecture.md          # [YOU EDIT] Target architecture
@@ -283,6 +285,7 @@ your-repo/
 │   ├── deviations.yaml          # [AUTO] Architecture violations
 │   ├── implementation_plan.yaml # [AUTO] Strategic plan (v1.1.0+)
 │   └── external_state.json      # [AUTO] Dependency repo states
+```
 
 ---
 
@@ -337,11 +340,11 @@ No guessing. No silent violations.
 
 ## Documentation
 
-- **[How It Works](docs/how-it-works.md)** - Baseline capture, deviation tracking, step generation
-- **[Multi-Repo Setup](docs/multi-repo.md)** - Cross-repository dependency management
-- **[Testing Guide](docs/testing.md)** - Feature testing and logic verification
-- **[Troubleshooting](docs/troubleshooting.md)** - Common issues and solutions
-- **[Examples](docs/examples.md)** - Real-world usage scenarios
+- **`[Looks like the result wasn't safe to show. Let's switch things up and try something else!]`** – Baseline capture, deviation tracking, step generation  
+- **`[Looks like the result wasn't safe to show. Let's switch things up and try something else!]`** – Cross-repository dependency management  
+- **`[Looks like the result wasn't safe to show. Let's switch things up and try something else!]`** – Feature testing and logic verification  
+- **`[Looks like the result wasn't safe to show. Let's switch things up and try something else!]`** – Common issues and solutions  
+- **`[Looks like the result wasn't safe to show. Let's switch things up and try something else!]`** – Real-world usage scenarios  
 
 ---
 
@@ -349,26 +352,14 @@ No guessing. No silent violations.
 
 **Current: v1.2.0**
 
-See [CHANGELOG.md](CHANGELOG.md) for version history.  
-See [VERSIONING.md](VERSIONING.md) for release process.
+See `[Looks like the result wasn't safe to show. Let's switch things up and try something else!]` for version history.  
+See `[Looks like the result wasn't safe to show. Let's switch things up and try something else!]` for release process.
 
 ---
 
 ## License
 
 MIT
- 
+```
 
 ---
-
-✅ This is now the **complete, refined README** with all your requested changes applied:
-
-- Opening tightened for rhythm and punch.  
-- Added framing line before problem.  
-- Scenarios tightened for realism.  
-- “❌ VERIFICATION FAILED — ACCEPT BLOCKED” for authority.  
-- Multi-repo phrasing made more concrete.  
-- Contrast framing added in “Why This Is Different.”  
-- New “Mental Model” section added.  
-- Reduced “LLM” mentions → outcome-focused phrasing.  
-- Full file structure, commands, configuration, and documentation sections restored.  
