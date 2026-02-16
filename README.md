@@ -1,8 +1,8 @@
 # Copilot Sentinel
 
-**AI-assisted development with architectural guardrails.**
+**Make AI follow your architecture. Or block it.**
 
-Stop architectural drift before it ships. A discipline-enforcing CLI that makes AI coding assistants respect your architecture, verify implementations, and track cross-repo dependencies.
+Copilot is powerful. It's also chaotic. This CLI enforces discipline: captures your architecture as explicit rules, verifies every change against constraints, tests logic correctness, and blocks cross-repo work when dependencies break.
 
 [![Version](https://img.shields.io/badge/version-1.2.0-blue.svg)](https://github.com/Blink-deploy-in-a-blink/copilot-sentinel)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE)
@@ -11,12 +11,30 @@ Stop architectural drift before it ships. A discipline-enforcing CLI that makes 
 
 ## The Problem
 
-You use GitHub Copilot, Claude, or Cursor. The code looks great. Then:
+You use GitHub Copilot, Claude, or Cursor. The code looks great. You ship it. Then:
 
-- **Architectural violations** slip through (added HTTP server when you explicitly banned it)
-- **Logic bugs** hide in "implemented" features (security check returns true instead of false)
-- **Cross-repo chaos** when Service A depends on Service B's broken state
-- **No verification** that AI actually implemented what you asked for
+**Scenario 1: Architectural violation**
+```
+Your architecture.md: "NO HTTP servers (security requirement)"
+Copilot's code: Adds Flask app with @app.route('/api/jobs')
+Your review: Looks fine, ships to prod
+Reality: Now you have an unapproved attack surface
+```
+
+**Scenario 2: Logic bug in "completed" feature**
+```
+Step: "Add authentication check before processing"
+Copilot's code: if not is_authenticated(): return True  # Bug: inverted logic
+Your review: Function exists ✓, ships
+Reality: Unauthenticated users get full access
+```
+
+**Scenario 3: Cross-repo chaos**
+```
+Service A (agent): Built assuming Service B (UI) has /api/jobs/poll endpoint
+Service B reality: Endpoint doesn't exist yet, marked as HIGH deviation
+Your build: Agent deploys, crashes in production polling non-existent endpoint
+```
 
 **You need guardrails, not just autocomplete.**
 
@@ -69,11 +87,24 @@ wrapper accept                # Mark complete, move to next
 wrapper plan status
 ```
 
-**Output:**
+**Output (success):**
 ```
 ✅ Phase 1: Remove HTTP Server (3/3 steps complete)
 ⏳ Phase 2: Add Polling Mechanism (1/3 steps complete)
    → Next: Implement job poller with 30s interval
+```
+
+**Output (failure - catches violations):**
+```
+❌ VERIFICATION FAILED
+
+Step allows modifications to: src/poller.py, src/config.py
+Git diff shows changes to: src/poller.py, src/server.py ❌
+
+Unauthorized file modified: src/server.py
+Constraint violated: Step does not permit touching server code
+
+→ Fix: Revert src/server.py changes, re-run wrapper verify
 ```
 
 ---
@@ -147,6 +178,35 @@ wrapper accept
 | `wrapper snapshot` | Manual baseline capture (rarely needed) |
 | `wrapper diff-baseline` | Shows drift from baseline (debugging) |
 | `wrapper --version` | Show version |
+
+---
+
+## Multi-Repo Dependency Enforcement
+
+**Cross-repo safety:** If dependency repos have unresolved architectural violations, new work is blocked.
+
+```bash
+# Service A depends on Service B
+cd service-a
+wrapper sync-external --from ../service-b
+wrapper propose
+```
+
+**If Service B is broken:**
+```
+❌ BLOCKED: service-b has HIGH severity deviation "missing-auth-endpoint"
+Cannot proceed until dependency resolves architectural violation
+
+Step proposed: BLOCKED - waiting for service-b
+```
+
+**After Service B fixes the issue:**
+```
+✅ All dependencies clean
+Step proposed: Implement authentication flow (uses service-b endpoint)
+```
+
+**This prevents building on broken foundations.**
 
 ---
 
@@ -225,35 +285,34 @@ your-repo/
 
 ## Why This Is Different
 
-**Other tools:** "Here's some code that might work"  
-**Copilot Sentinel:** "Here's verified code that respects your architecture"
+**AI assistants generate code. This tool ensures that code respects your rules.**
 
 | Feature | Copilot/Cursor/Claude | Copilot Sentinel |
 |---------|----------------------|------------------|
-| Architectural rules | Implicit (comments, docs) | Explicit (architecture.md) |
-| Verification | Manual code review | Automatic constraint checking |
-| Logic testing | Manual QA | LLM-verified feature checklists |
-| Cross-repo dependencies | Hope it works | Blocks work if deps broken |
-| Baseline tracking | None | Auto-scans repo, tracks violations |
-| Implementation planning | Ad-hoc | Strategic phase/step breakdown |
+| Architectural rules | Implicit (buried in comments) | Explicit (architecture.md, enforced) |
+| Verification | Manual code review | Automatic git diff + constraint checking |
+| Logic correctness | Hope and pray | LLM analyzes features vs actual code |
+| Cross-repo safety | "It should work" | Blocks if dependencies have violations |
+| Drift tracking | None | Baseline snapshot + deviation YAML |
+| Planning | Ad-hoc prompts | Strategic phase/step breakdown |
 
-**Philosophy:** Enforce discipline, not intelligence. AI is powerful but implicit. This tool makes constraints explicit.
+**Philosophy:** Discipline over intelligence. Make constraints explicit, verify everything, block chaos.
 
 ---
 
 ## Who This Is For
 
-✅ **You should use this if:**
-- You use AI assistants (Copilot, Claude, Cursor) for coding
-- You have explicit architecture rules that must not be violated
-- You work in multi-repo environments with dependencies
-- You want verification that features are actually implemented correctly
-- You need audit trails of what changed and why
+✅ **Use this if you:**
+- Code with AI assistants (Copilot, Claude, Cursor) and need guardrails
+- Have architectural rules that AI keeps violating
+- Work in multi-repo systems where one broken service cascades
+- Want logic verification, not just "code exists" verification
+- Need audit trails for compliance or team accountability
 
-❌ **This is overkill if:**
-- Solo throwaway scripts with no architecture
-- Prototypes where "anything goes"
-- You trust AI output without verification
+❌ **Skip this if you:**
+- Write throwaway scripts with no architecture constraints
+- Trust AI output 100% without verification
+- Work solo on prototypes where "anything goes"
 
 ---
 
