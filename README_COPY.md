@@ -2,22 +2,28 @@
 
 **Make AI follow your architecture. Or block it.**
 
-Copilot is powerful. It's also chaotic. This CLI enforces discipline: captures your architecture as explicit rules, verifies every change against constraints, tests logic correctness, and blocks cross-repo work when dependencies break.
+Copilot is powerful. It’s also chaotic.  
 
-[![Version](https://img.shields.io/badge/version-1.2.0-blue.svg)](https://github.com/Blink-deploy-in-a-blink/copilot-sentinel)
+Copilot Sentinel turns AI coding into a disciplined, verifiable process:  
+- Architecture is explicit.  
+- Every change is checked.  
+- Logic is tested.  
+- Cross-repo chaos is blocked.  
+
+[![Version](https://img.shields.io/badge/version-1.2.0-blue.svg)](https://github.com/Blink-deploy-in-a-blink/copilot-sentinel)  
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE)
 
 ---
 
 ## The Problem
 
-You use GitHub Copilot, Claude, or Cursor. The code looks great. You ship it. Then:
+AI assistants generate code. They do not enforce architecture.
 
 **Scenario 1: Architectural violation**
 ```
 Your architecture.md: "NO HTTP servers (security requirement)"
 Copilot's code: Adds Flask app with @app.route('/api/jobs')
-Your review: Looks fine, ships to prod
+Code review: Looks fine. Merged.
 Reality: Now you have an unapproved attack surface
 ```
 
@@ -25,7 +31,7 @@ Reality: Now you have an unapproved attack surface
 ```
 Step: "Add authentication check before processing"
 Copilot's code: if not is_authenticated(): return True  # Bug: inverted logic
-Your review: Function exists ✓, ships
+Code review: Function exists ✓. Merged.
 Reality: Unauthenticated users get full access
 ```
 
@@ -44,7 +50,7 @@ Your build: Agent deploys, crashes in production polling non-existent endpoint
 
 1. **Captures your architecture** as explicit rules (no HTTP servers, no direct DB access, etc.)
 2. **Scans your repo** and finds ALL violations automatically (baseline snapshot)
-3. **Plans implementation** with LLM-assisted strategic breakdown
+3. **Plans implementation** with strategic breakdown
 4. **Generates steps** that fix violations or implement features
 5. **Verifies git diff** against constraints before accepting changes
 6. **Tests logic** to confirm features actually work correctly
@@ -96,7 +102,7 @@ wrapper plan status
 
 **Output (failure - catches violations):**
 ```
-❌ VERIFICATION FAILED
+❌ VERIFICATION FAILED — ACCEPT BLOCKED
 
 Step allows modifications to: src/poller.py, src/config.py
 Git diff shows changes to: src/poller.py, src/server.py ❌
@@ -206,7 +212,7 @@ Step proposed: BLOCKED - waiting for service-b
 Step proposed: Implement authentication flow (uses service-b endpoint)
 ```
 
-**This prevents building on broken foundations.**
+**This prevents building features on top of broken systems.**
 
 ---
 
@@ -254,10 +260,10 @@ llm_provider: deepseek  # or 'openai' or 'anthropic'
 deepseek_api_key: sk-...  # or set via environment variable
 ```
 
-**Supported LLMs:**
-- **DeepSeek** (default) - Fast, cheap, good results
+**Supported Providers:**
+- **DeepSeek** (default) - Fast, cheap, good results  
 - **OpenAI** - GPT-4 / GPT-3.5  
-- **Anthropic** - Claude
+- **Anthropic** - Claude  
 
 ---
 
@@ -285,13 +291,16 @@ your-repo/
 
 ## Why This Is Different
 
-**AI assistants generate code. This tool ensures that code respects your rules.**
+AI assistants optimize for speed.  
+Copilot Sentinel optimizes for discipline.  
+
+AI assistants generate code. This tool ensures that code respects your rules.
 
 | Feature | Copilot/Cursor/Claude | Copilot Sentinel |
 |---------|----------------------|------------------|
 | Architectural rules | Implicit (buried in comments) | Explicit (architecture.md, enforced) |
 | Verification | Manual code review | Automatic git diff + constraint checking |
-| Logic correctness | Hope and pray | LLM analyzes features vs actual code |
+| Logic correctness | Hope and pray | Features verified against actual implementation |
 | Cross-repo safety | "It should work" | Blocks if dependencies have violations |
 | Drift tracking | None | Baseline snapshot + deviation YAML |
 | Planning | Ad-hoc prompts | Strategic phase/step breakdown |
@@ -300,29 +309,42 @@ your-repo/
 
 ---
 
+## Mental Model
+
+- You define the rules.  
+- AI proposes changes.  
+- Sentinel verifies constraints.  
+- Accept is deterministic.  
+- State is tracked.  
+- Dependencies are enforced.  
+
+No guessing. No silent violations.
+
+---
+
 ## Who This Is For
 
-✅ **Use this if you:**
-- Code with AI assistants (Copilot, Claude, Cursor) and need guardrails
-- Have architectural rules that AI keeps violating
-- Work in multi-repo systems where one broken service cascades
-- Want logic verification, not just "code exists" verification
-- Need audit trails for compliance or team accountability
+✅ **Use this if you:**  
+- Code with AI assistants (Copilot, Claude, Cursor) and need guardrails  
+- Have architectural rules that AI keeps violating  
+- Work in multi-repo systems where one broken service cascades  
+- Want logic verification, not just "code exists" verification  
+- Need audit trails for compliance or team accountability  
 
-❌ **Skip this if you:**
-- Write throwaway scripts with no architecture constraints
-- Trust AI output 100% without verification
-- Work solo on prototypes where "anything goes"
+❌ **Skip this if you:**  
+- Write throwaway scripts with no architecture constraints  
+- Trust AI output 100% without verification  
+- Work solo on prototypes where "anything goes"  
 
 ---
 
 ## Documentation
 
-- **[How It Works](docs/how-it-works.md)** - Baseline capture, deviation tracking, step generation
-- **[Multi-Repo Setup](docs/multi-repo.md)** - Cross-repository dependency management
-- **[Testing Guide](docs/testing.md)** - Feature testing and logic verification
-- **[Troubleshooting](docs/troubleshooting.md)** - Common issues and solutions
-- **[Examples](docs/examples.md)** - Real-world usage scenarios
+- **`[Looks like the result wasn't safe to show. Let's switch things up and try something else!]`** – Baseline capture, deviation tracking, step generation  
+- **`[Looks like the result wasn't safe to show. Let's switch things up and try something else!]`** – Cross-repository dependency management  
+- **`[Looks like the result wasn't safe to show. Let's switch things up and try something else!]`** – Feature testing and logic verification  
+- **`[Looks like the result wasn't safe to show. Let's switch things up and try something else!]`** – Common issues and solutions  
+- **`[Looks like the result wasn't safe to show. Let's switch things up and try something else!]`** – Real-world usage scenarios  
 
 ---
 
@@ -330,11 +352,14 @@ your-repo/
 
 **Current: v1.2.0**
 
-See [CHANGELOG.md](CHANGELOG.md) for version history.  
-See [VERSIONING.md](VERSIONING.md) for release process.
+See `[Looks like the result wasn't safe to show. Let's switch things up and try something else!]` for version history.  
+See `[Looks like the result wasn't safe to show. Let's switch things up and try something else!]` for release process.
 
 ---
 
 ## License
 
 MIT
+```
+
+---
