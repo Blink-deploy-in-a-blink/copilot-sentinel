@@ -87,18 +87,27 @@ $ wrapper accept
 - Git repository
 - LLM API key (DeepSeek, OpenAI, or Anthropic)
 
-### Install
+### Install from Source
 
 ```bash
 git clone https://github.com/Blink-deploy-in-a-blink/copilot-sentinel.git
 cd copilot-sentinel
-pip install -e .
+pip install .
 ```
 
-### Configure LLM
+### Verify Installation
 
 ```bash
-# DeepSeek (default)
+wrapper --version
+# Should output: wrapper v1.3.0
+```
+
+### Configure LLM API Key
+
+**Option 1: Environment Variable (Recommended)**
+
+```bash
+# DeepSeek (default, recommended)
 export DEEPSEEK_API_KEY="sk-..."
 
 # Or OpenAI
@@ -108,7 +117,18 @@ export OPENAI_API_KEY="sk-..."
 export ANTHROPIC_API_KEY="sk-..."
 ```
 
-For Windows PowerShell: `$env:DEEPSEEK_API_KEY="sk-..."`
+**Windows PowerShell:**
+```powershell
+$env:DEEPSEEK_API_KEY="sk-..."
+```
+
+**Option 2: Config File**
+
+After running `wrapper init`, edit `.wrapper/config.yaml`:
+```yaml
+llm_provider: deepseek
+deepseek_api_key: sk-...
+```
 
 ---
 
