@@ -1,5 +1,9 @@
 # How It Works
 
+Internal workflows and process flows for Copilot Sentinel.
+
+---
+
 ## Overview
 
 Copilot Sentinel uses a baseline-deviation-fix workflow:
@@ -8,6 +12,50 @@ Copilot Sentinel uses a baseline-deviation-fix workflow:
 2. **Generate steps** - Create fix steps or implementation steps
 3. **Verify changes** - Check git diff against constraints
 4. **Track progress** - Update plan and deviation status
+
+---
+
+## Complete Workflow Diagram
+
+```
+┌─────────────────────────────────────────────────────────────┐
+│  BASELINE CAPTURE (first run only)                          │
+│  - Scans repo filesystem                                    │
+│  - LLM generates deviations.yaml (violations of arch.md)   │
+│  - Always passes (just documenting reality)                 │
+└─────────────────────────────────────────────────────────────┘
+                          ↓
+┌─────────────────────────────────────────────────────────────┐
+│  STEP PROPOSAL                                               │
+│  - LLM reads deviations.yaml, proposes next fix             │
+│  - OR: Read from implementation_plan.yaml                   │
+│  - Creates step.yaml (goal, allowed files, features)        │
+└─────────────────────────────────────────────────────────────┘
+                          ↓
+┌─────────────────────────────────────────────────────────────┐
+│  PROMPT COMPILATION                                          │
+│  - Converts step.yaml into copilot_prompt.txt               │
+│  - You give this to AI, paste response in copilot_output.txt│
+└─────────────────────────────────────────────────────────────┘
+                          ↓
+┌─────────────────────────────────────────────────────────────┐
+│  VERIFICATION (git diff + LLM review)                        │
+│  - Git diff: Only allowed_files changed? ✅ Hard gate       │
+│  - LLM: Does diff match goal? ⚠️  Soft gate                │
+│  - LLM: Are features implemented? ⚠️  Soft gate            │
+│  - Result: PASS or FAIL → stored in state.json              │
+└─────────────────────────────────────────────────────────────┘
+                          ↓
+┌─────────────────────────────────────────────────────────────┐
+│  ACCEPTANCE (state update)                                   │
+│  - BLOCKED if verify status != PASS ✅ Hard gate            │
+│  - Appends step to state.json (audit log)                   │
+│  - Updates deviations.yaml (marks resolved)                 │
+│  - Updates implementation_plan.yaml (marks complete)         │
+└─────────────────────────────────────────────────────────────┘
+                          ↓
+                   (repeat until done)
+```
 
 ---
 
@@ -289,6 +337,34 @@ wrapper sync-external --from ../ui
 wrapper propose  # Now generates real work step
 ```
 
+### Cross-Repo Blocking Flow
+
+```
+[auth repo]
+  ↓ Make breaking change
+  ↓ wrapper verify → Creates deviation "token-format-change" (high severity)
+  ↓ (not fixed yet)
+
+[agent repo]
+  ↓ wrapper sync-external --from ../auth
+  ↓ Reads auth's deviations.yaml
+  ↓ Finds "token-format-change" (high + unresolved) → blocker
+  ↓
+  ↓ wrapper propose
+  ↓ LLM sees blocker in external_state.json
+  ↓ Proposes step: "BLOCKED - waiting for auth to fix token-format-change"
+  ↓ (you cannot do real work)
+
+[auth repo]
+  ↓ Fix the issue
+  ↓ wrapper accept → Marks "token-format-change" as resolved
+
+[agent repo]
+  ↓ wrapper sync-external --from ../auth (re-sync)
+  ↓ Now auth has no blockers
+  ↓ wrapper propose → Real work step
+```
+
 ---
 
 ## Typical Workflow
@@ -327,3 +403,14 @@ The first `wrapper verify` in a repository:
 - **Message**: "Baseline captured - found X deviations"
 
 This ensures you can adopt Copilot Sentinel in existing projects without immediate failures.
+
+---
+
+## Next Steps
+
+- **[Getting Started](getting-started.md)** - Hands-on tutorial
+- **[Core Concepts](core-concepts.md)** - Understand file structures and guarantees
+- **[Commands](commands.md)** - Complete command reference
+- **[Examples](examples.md)** - Real-world scenarios
+- **[Multi-Repo Setup](multi-repo.md)** - Cross-repository management
+
