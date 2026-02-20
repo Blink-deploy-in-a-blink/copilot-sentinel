@@ -7,6 +7,25 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [1.3.0] - 2026-02-21
+
+### Added
+- **Guided Initialization** (`wrapper init --guided`)
+  - Interactive 7-question setup flow for new repositories
+  - LLM-assisted formatting of architecture.md and repo.yaml
+  - Automatic API key validation before starting questions
+  - Raw user answers preserved as comments for reference
+  - Strict LLM prompts to prevent hallucination/invention
+  - Warns before overwriting existing files
+  - Easy onboarding for new users
+
+### Changed
+- `wrapper init` now supports optional `--guided` flag
+- Added `guided_init_helper` system prompt to LLM client
+
+### Fixed
+- None
+
 ## [1.2.0] - 2026-01-30
 
 ### Added
