@@ -32,30 +32,108 @@ Initialize Copilot Sentinel in your project.
 
 **Usage:**
 ```bash
-wrapper init
+wrapper init                # Manual setup (edit templates yourself)
+wrapper init --guided       # Interactive guided setup with AI assistance
 ```
 
 **What it does:**
 - Creates `.wrapper/` directory
-- Generates template configuration files
+- Generates configuration files
 
 **Files created:**
-- `architecture.md` - Edit with your target architecture
-- `repo.yaml` - Edit with repo boundaries
-- `config.yaml` - Optional LLM configuration
+- `architecture.md` - Target architecture definition
+- `repo.yaml` - Repository boundaries and constraints
+- `config.yaml` - LLM configuration
 
 **Requirements:**
 - Must be in a git repository
 - Directory must not already have `.wrapper/`
 
+---
+
+#### Standard Mode (Manual)
+
+```bash
+wrapper init
+```
+
+Creates template files that you edit manually.
+
 **Example output:**
 ```
-✅ Initialized .wrapper/ directory
-Created:
-  - architecture.md (edit this with your target architecture)
-  - repo.yaml (edit this with your repo boundaries)
-  - config.yaml (optional, prefer environment variables)
+Initializing .wrapper/
+  Created architecture.md
+  Created repo.yaml
+  Created config.yaml
+
+Next steps:
+  1. Edit .wrapper/architecture.md with your target architecture
+  2. Edit .wrapper/repo.yaml with repo constraints
+  3. Set DEEPSEEK_API_KEY environment variable (or edit config.yaml)
+  4. Run: wrapper propose
 ```
+
+---
+
+#### Guided Mode (Interactive)
+
+```bash
+wrapper init --guided
+```
+
+**What it does:**
+- Asks 7 questions about your repository
+- Uses AI to format answers into proper documentation
+- Preserves raw answers as comments for reference
+- Validates API key before starting
+
+**Requirements:**
+- Must have LLM API key configured (DEEPSEEK_API_KEY, OPENAI_API_KEY, or ANTHROPIC_API_KEY)
+- If missing, creates config.yaml and tells you to set key first
+
+**Interactive questions:**
+1. What is the primary purpose of this repository?
+2. What are the main components or modules?
+3. What are the core responsibilities this repo MUST handle?
+4. What should this repo NEVER do?
+5. How does this repo interact with other systems?
+6. Describe the repository's role (1-2 sentences)
+7. List hard constraints (optional)
+
+**Example output:**
+```
+🤖 Guided Repository Setup
+============================================================
+I'll ask questions about your repository and help generate
+proper architecture.md and repo.yaml files.
+
+📋 ARCHITECTURE QUESTIONS
+------------------------------------------------------------
+
+1/7: What is the PRIMARY PURPOSE of this repository?
+    > [your answer]
+
+...
+
+🤖 Processing your answers with AI...
+
+✅ Generated content preview:
+[shows formatted architecture.md and repo.yaml]
+
+Create files with this content? [Y/n]: y
+
+✅ Created architecture.md
+✅ Created repo.yaml
+✅ Created config.yaml
+
+🎉 Setup complete!
+```
+
+**Benefits:**
+- ✅ Faster onboarding for new projects
+- ✅ AI ensures proper formatting
+- ✅ Raw answers preserved as comments
+- ✅ Can regenerate sections if needed
 
 ---
 

@@ -88,6 +88,44 @@ git commit -m "Initial commit"
 
 ## Step 1: Initialize Copilot Sentinel
 
+**Option A: Guided Setup (Recommended for new users)**
+
+```bash
+wrapper init --guided
+```
+
+**What happens:**
+- Asks 7 interactive questions about your project
+- AI formats your answers into proper documentation
+- Creates architecture.md and repo.yaml automatically
+
+**Requirements:**
+- Must have API key set (DEEPSEEK_API_KEY, OPENAI_API_KEY, or ANTHROPIC_API_KEY)
+
+**Example interaction:**
+```
+🤖 Guided Repository Setup
+============================================================
+
+📋 ARCHITECTURE QUESTIONS
+
+1/7: What is the PRIMARY PURPOSE of this repository?
+    > A CLI tool for managing Docker containers with better UX
+
+2/7: What are the MAIN COMPONENTS or modules?
+    > CLI interface, Docker API wrapper, Configuration manager
+
+...
+
+✅ Created architecture.md
+✅ Created repo.yaml
+✅ Created config.yaml
+```
+
+---
+
+**Option B: Manual Setup**
+
 ```bash
 wrapper init
 ```
@@ -98,11 +136,16 @@ wrapper init
 
 **Expected output:**
 ```
-✅ Initialized .wrapper/ directory
-Created:
-  - architecture.md (edit this with your target architecture)
-  - repo.yaml (edit this with your repo boundaries)
-  - config.yaml (optional, prefer environment variables)
+Initializing .wrapper/
+  Created architecture.md
+  Created repo.yaml
+  Created config.yaml
+
+Next steps:
+  1. Edit .wrapper/architecture.md with your target architecture
+  2. Edit .wrapper/repo.yaml with repo constraints
+  3. Set DEEPSEEK_API_KEY environment variable
+  4. Run: wrapper propose
 ```
 
 **Files created:**
@@ -118,7 +161,9 @@ your-project/
 
 ## Step 2: Define Your Architecture
 
-Edit `.wrapper/architecture.md` to describe your target architecture.
+**If you used `--guided`:** Your architecture.md is already filled in! Review and refine it.
+
+**If you used manual init:** Edit `.wrapper/architecture.md` to describe your target architecture.
 
 **Example:**
 

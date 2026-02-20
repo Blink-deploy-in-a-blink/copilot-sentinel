@@ -40,10 +40,13 @@ AI coding assistants are powerful but chaotic:
 ## Quick Example
 
 ```bash
-# 1. Initialize
-$ wrapper init
-# Creates .wrapper/architecture.md and .wrapper/repo.yaml
-# Edit these files with your target architecture
+# 1. Initialize (choose one)
+$ wrapper init --guided          # Interactive AI-assisted setup (recommended)
+# OR
+$ wrapper init                   # Manual setup (edit templates yourself)
+
+# Guided mode asks 7 questions and generates architecture.md + repo.yaml
+# Manual mode creates templates you fill in yourself
 
 # 2. Capture baseline (first run)
 $ wrapper propose
@@ -160,6 +163,7 @@ Repeat until all deviations are fixed.
 | Command | What It Does |
 |---------|--------------|
 | `wrapper init` | Initialize `.wrapper/` directory with templates |
+| `wrapper init --guided` | Interactive AI-assisted setup (7 questions) |
 | `wrapper propose` | Generate next step (from plan or deviations) |
 | `wrapper compile` | Create AI prompt from current step |
 | `wrapper verify` | Check git diff against step constraints |
@@ -169,6 +173,7 @@ Repeat until all deviations are fixed.
 | `wrapper sync-external` | Sync dependency repo states (multi-repo) |
 
 **→ See [Commands Reference](docs/commands.md) for complete details**
+
 
 ---
 
