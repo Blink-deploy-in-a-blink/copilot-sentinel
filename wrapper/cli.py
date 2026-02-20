@@ -48,6 +48,11 @@ def main():
 
     # init command
     init_parser = subparsers.add_parser("init", help="Initialize .wrapper directory with templates")
+    init_parser.add_argument(
+        "--guided",
+        action="store_true",
+        help="Interactive guided setup with LLM assistance"
+    )
     init_parser.set_defaults(func=cmd_init)
 
     # propose command

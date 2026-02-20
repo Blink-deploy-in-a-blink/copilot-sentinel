@@ -54,6 +54,12 @@ SYSTEM_PROMPTS = {
         "Be STRICT. FAIL if any violation is found. "
         "Report violations clearly. Output structured analysis."
     ),
+    "guided_init_helper": (
+        "You are an architecture documentation assistant. "
+        "Format user input into clear, structured, professional documentation. "
+        "Be concise and organized. Use proper markdown formatting where appropriate. "
+        "Output ONLY the formatted text with no preamble, explanations, or meta-commentary."
+    ),
 }
 
 
