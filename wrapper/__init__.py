@@ -14,6 +14,6 @@ try:
     with open(_version_file, "r", encoding="utf-8") as _f:
         __version__ = _f.read().strip()
 except FileNotFoundError:
-    __version__ = "0.0.0"
+    __version__ = "unknown"
 
 __all__ = ["main"]

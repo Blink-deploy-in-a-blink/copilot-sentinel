@@ -13,10 +13,8 @@ Track what changed, enforce which files can be modified, and maintain an audit t
 
 ---
 
-<!-- Terminal demo GIF: replace the URL below with an actual recording (e.g. via asciinema or terminalizer) -->
-<p align="center">
-  <img src="https://github.com/Blink-deploy-in-a-blink/copilot-sentinel/raw/main/docs/assets/demo.gif" alt="Copilot Sentinel terminal demo" width="700">
-</p>
+<!-- TODO: Add a terminal demo GIF (e.g. via asciinema or terminalizer) and uncomment the image tag below -->
+<!-- <p align="center"><img src="docs/assets/demo.gif" alt="Copilot Sentinel terminal demo" width="700"></p> -->
 
 ---
 
