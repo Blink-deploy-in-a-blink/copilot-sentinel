@@ -8,6 +8,15 @@ Track what changed, enforce which files can be modified, and maintain an audit t
 
 [![Version](https://img.shields.io/badge/version-1.3.0-blue.svg)](https://github.com/Blink-deploy-in-a-blink/copilot-sentinel)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE)
+[![CI](https://github.com/Blink-deploy-in-a-blink/copilot-sentinel/actions/workflows/ci.yml/badge.svg)](https://github.com/Blink-deploy-in-a-blink/copilot-sentinel/actions/workflows/ci.yml)
+[![Python 3.9+](https://img.shields.io/badge/python-3.9+-blue.svg)](https://www.python.org/downloads/)
+
+---
+
+<!-- Terminal demo GIF: replace the URL below with an actual recording (e.g. via asciinema or terminalizer) -->
+<p align="center">
+  <img src="https://github.com/Blink-deploy-in-a-blink/copilot-sentinel/raw/main/docs/assets/demo.gif" alt="Copilot Sentinel terminal demo" width="700">
+</p>
 
 ---
 
@@ -248,6 +257,18 @@ Repeat until all deviations are fixed.
 - **[Multi-Repo Setup](docs/multi-repo.md)** - Cross-repository management
 - **[Testing Guide](docs/testing.md)** - Feature verification and testing
 - **[Troubleshooting](docs/troubleshooting.md)** - Common issues and solutions
+
+---
+
+## Contributing
+
+We welcome contributions! Please see [CONTRIBUTING.md](CONTRIBUTING.md) for guidelines on how to get started.
+
+---
+
+## Roadmap
+
+See [docs/ROADMAP.md](docs/ROADMAP.md) for planned features and next steps.
 
 ---
 
