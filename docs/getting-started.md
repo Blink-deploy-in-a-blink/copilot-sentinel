@@ -27,7 +27,7 @@ wrapper --version
 
 **Expected output:**
 ```
-Copilot Sentinel v1.2.0
+wrapper v1.3.0
 ```
 
 ---

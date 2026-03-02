@@ -10,7 +10,7 @@ Copilot Sentinel turns AI coding into a disciplined, verifiable process:
 - Logic is tested.  
 - Cross-repo chaos is blocked.  
 
-[![Version](https://img.shields.io/badge/version-1.2.0-blue.svg)](https://github.com/Blink-deploy-in-a-blink/copilot-sentinel)  
+[![Version](https://img.shields.io/badge/version-1.3.0-blue.svg)](https://github.com/Blink-deploy-in-a-blink/copilot-sentinel)  
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE)
 
 ---
@@ -350,7 +350,7 @@ No guessing. No silent violations.
 
 ## Version
 
-**Current: v1.2.0**
+**Current: v1.3.0**
 
 See `[Looks like the result wasn't safe to show. Let's switch things up and try something else!]` for version history.  
 See `[Looks like the result wasn't safe to show. Let's switch things up and try something else!]` for release process.
