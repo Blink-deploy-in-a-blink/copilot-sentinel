@@ -6,7 +6,7 @@ Copilot Sentinel wraps AI-assisted development in a controlled workflow.
 It uses git to enforce file boundaries and LLMs to review architectural and logical intent.
 Track what changed, enforce which files can be modified, and maintain an audit trail of every step.
 
-[![Version](https://img.shields.io/badge/version-1.2.0-blue.svg)](https://github.com/Blink-deploy-in-a-blink/copilot-sentinel)
+[![Version](https://img.shields.io/badge/version-1.3.0-blue.svg)](https://github.com/Blink-deploy-in-a-blink/copilot-sentinel)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE)
 
 ---
@@ -83,7 +83,7 @@ $ wrapper accept
 
 ### Requirements
 
-- Python 3.8+
+- Python 3.9+
 - Git repository
 - LLM API key (DeepSeek, OpenAI, or Anthropic)
 
@@ -99,7 +99,7 @@ pip install .
 
 ```bash
 wrapper --version
-# Should output: wrapper v1.3.0
+# Expected output: wrapper v1.3.0
 ```
 
 ### Configure LLM API Key
@@ -253,7 +253,7 @@ Repeat until all deviations are fixed.
 
 ## Version
 
-**Current: v1.2.0**
+**Current: v1.3.0**
 
 - [CHANGELOG.md](CHANGELOG.md) - Version history
 - [VERSIONING.md](VERSIONING.md) - Release process

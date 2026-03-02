@@ -260,4 +260,3 @@ def mark_step_complete_in_plan(
                 return True
     
     return False
-    return True

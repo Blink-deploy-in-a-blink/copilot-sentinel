@@ -2,20 +2,26 @@
 
 ## Supported Versions
 
-Use this section to tell people about which versions of your project are
-currently being supported with security updates.
-
 | Version | Supported          |
 | ------- | ------------------ |
-| 5.1.x   | :white_check_mark: |
-| 5.0.x   | :x:                |
-| 4.0.x   | :white_check_mark: |
-| < 4.0   | :x:                |
+| 1.3.x   | :white_check_mark: |
+| 1.2.x   | :white_check_mark: |
+| < 1.2   | :x:                |
 
 ## Reporting a Vulnerability
 
-Use this section to tell people how to report a vulnerability.
+If you discover a security vulnerability in Copilot Sentinel, please report it responsibly.
 
-Tell them where to go, how often they can expect to get an update on a
-reported vulnerability, what to expect if the vulnerability is accepted or
-declined, etc.
+**How to report:**
+- Open a [GitHub Issue](https://github.com/Blink-deploy-in-a-blink/copilot-sentinel/issues) with the label `security`
+- Or email the maintainers directly (see repository contact info)
+
+**What to expect:**
+- Acknowledgment within 48 hours
+- Status update within 7 days
+- Fix or mitigation plan within 30 days for confirmed vulnerabilities
+
+**Scope:**
+- Copilot Sentinel is a local CLI tool — it does not run a server or handle network traffic directly
+- LLM API keys are user-configured; secure storage of keys is the user's responsibility
+- The `.wrapper/` directory may contain sensitive project context — it is gitignored by default
