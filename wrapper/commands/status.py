@@ -10,20 +10,14 @@ from wrapper.core.files import (
     load_repo_yaml,
     load_state,
     load_step_yaml,
-    load_copilot_output,
     load_baseline_snapshot,
     load_deviations,
     load_implementation_plan,
 )
 from wrapper.core.paths import (
     get_wrapper_dir,
-    ARCHITECTURE_FILE,
-    REPO_YAML_FILE,
-    STEP_YAML_FILE,
     COPILOT_PROMPT_FILE,
-    COPILOT_OUTPUT_FILE,
 )
-from wrapper.core.git import is_git_repo
 
 
 def cmd_status(args) -> bool:
@@ -95,7 +89,7 @@ def cmd_status(args) -> bool:
     # 5. Determine workflow state and next action
     print()
     print("  " + "─" * 56)
-    _show_next_action(arch, repo, step, state, plan, baseline)
+    _show_next_action(arch, repo, step, state, plan, baseline, wrapper_dir)
 
     print()
     print("━" * 60)
@@ -108,7 +102,7 @@ def _status_line(label: str, exists: bool) -> None:
     print(f"  {icon} {label}")
 
 
-def _show_next_action(arch, repo, step, state, plan, baseline) -> None:
+def _show_next_action(arch, repo, step, state, plan, baseline, wrapper_dir) -> None:
     """Determine and display the recommended next action."""
 
     # Not fully initialized
@@ -121,7 +115,7 @@ def _show_next_action(arch, repo, step, state, plan, baseline) -> None:
     if baseline is None and len(state.get("done_steps", [])) == 0:
         if step:
             print(f"  🔜 Current step: {step.get('step_id', 'unknown')}")
-            _show_step_workflow_state(step, state)
+            _show_step_workflow_state(step, state, wrapper_dir)
         else:
             print("  🔜 Next: wrapper propose")
             print("     (First run will capture baseline snapshot)")
@@ -130,11 +124,9 @@ def _show_next_action(arch, repo, step, state, plan, baseline) -> None:
     # Active step in progress
     if step:
         step_id = step.get("step_id", "unknown")
-        last_verify = state.get("last_verify_status")
-        last_verify_step = state.get("last_verify_step")
 
         print(f"  🔄 Active step: {step_id}")
-        _show_step_workflow_state(step, state)
+        _show_step_workflow_state(step, state, wrapper_dir)
         return
 
     # No active step — need to propose
@@ -153,14 +145,14 @@ def _show_next_action(arch, repo, step, state, plan, baseline) -> None:
         print("     Tip: Run 'wrapper plan init' to create a structured plan first")
 
 
-def _show_step_workflow_state(step, state) -> None:
+def _show_step_workflow_state(step, state, wrapper_dir) -> None:
     """Show where the user is in the propose→compile→verify→accept loop."""
 
     step_id = step.get("step_id", "unknown")
     last_verify = state.get("last_verify_status")
     last_verify_step = state.get("last_verify_step")
 
-    copilot_prompt_path = get_wrapper_dir() / COPILOT_PROMPT_FILE
+    copilot_prompt_path = wrapper_dir / COPILOT_PROMPT_FILE
     has_prompt = copilot_prompt_path.exists()
 
     if not has_prompt:

@@ -211,7 +211,7 @@ def _validate_api_key(key: str) -> bool:
     """Check if an API key looks valid (non-empty, non-placeholder)."""
     if not key or not key.strip():
         return False
-    placeholder_values = {"your-key-here", "sk-xxx", "your_api_key", ""}
+    placeholder_values = {"your-key-here", "sk-xxx", "your_api_key"}
     return key.strip() not in placeholder_values
 
 
