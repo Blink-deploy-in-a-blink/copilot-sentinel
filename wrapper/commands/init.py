@@ -89,17 +89,6 @@ llm_provider: deepseek
 '''
 
 
-def cmd_init(args) -> bool:
-    """Initialize .wrapper directory with template files."""
-    
-    # Check for --guided flag
-    if hasattr(args, 'guided') and args.guided:
-        return cmd_init_guided(args)
-    
-    # Original non-guided behavior
-    return cmd_init_basic(args)
-
-
 def cmd_init_basic(args) -> bool:
     """Initialize .wrapper directory with template files (non-guided)."""
     

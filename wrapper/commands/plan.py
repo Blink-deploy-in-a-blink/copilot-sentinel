@@ -1,7 +1,8 @@
 """
 wrapper plan - Interactive implementation planning.
 
-Generates a strategic plan for fixing architectural deviations.
+Generates a strategic implementation plan for building or evolving
+a repository to match its target architecture.
 """
 
 import json
@@ -15,6 +16,7 @@ from wrapper.core.files import (
     load_state,
     load_implementation_plan,
     save_implementation_plan,
+    strip_markdown_fences,
 )
 from wrapper.core.paths import get_file_path, IMPLEMENTATION_PLAN_FILE
 from wrapper.core.llm import get_llm_client
@@ -193,7 +195,8 @@ def generate_phases(
         summary = baseline.get("summary", {})
         baseline_summary = f"{summary.get('total_files', '?')} files, {summary.get('total_directories', '?')} directories"
     
-    prompt = f"""You are an expert software architect helping plan a refactoring project.
+    prompt = f"""You are an expert software architect helping plan a software implementation project.
+This may be building a NEW application from scratch or evolving an existing codebase to match its target architecture.
 
 ARCHITECTURE (target state):
 {architecture[:2000]}
@@ -201,11 +204,11 @@ ARCHITECTURE (target state):
 CURRENT STATE:
 {baseline_summary}
 
-DEVIATIONS FROM ARCHITECTURE:
+GAPS BETWEEN CURRENT AND TARGET STATE:
 {deviations_summary}
 
 TASK:
-Propose 4-6 high-level implementation phases to fix these deviations and align with architecture.
+Propose 4-6 high-level implementation phases to build out or align the codebase with the target architecture.
 
 Each phase should:
 - Have a clear goal
@@ -233,14 +236,7 @@ Propose phases now:"""
         response = llm.generate(prompt, "step_proposer")
         
         # Clean response
-        response = response.strip()
-        if response.startswith("```"):
-            lines = response.split("\n")
-            if lines[0].startswith("```"):
-                lines = lines[1:]
-            if lines and lines[-1].startswith("```"):
-                lines = lines[:-1]
-            response = "\n".join(lines).strip()
+        response = strip_markdown_fences(response)
         
         # Parse JSON
         phases = json.loads(response)
@@ -477,14 +473,7 @@ Propose steps now:"""
         response = llm.generate(prompt, "step_proposer")
         
         # Clean response
-        response = response.strip()
-        if response.startswith("```"):
-            lines = response.split("\n")
-            if lines[0].startswith("```"):
-                lines = lines[1:]
-            if lines and lines[-1].startswith("```"):
-                lines = lines[:-1]
-            response = "\n".join(lines).strip()
+        response = strip_markdown_fences(response)
         
         # Parse JSON
         steps = json.loads(response)
@@ -587,7 +576,7 @@ def gather_security_requirements(step: dict) -> List[str]:
         for idx in indices:
             if 0 <= idx < len(options) - 1:  # Exclude "None"
                 reqs.append(options[idx])
-    except:
+    except (ValueError, IndexError):
         pass
     
     return reqs
@@ -639,7 +628,7 @@ def gather_cost_requirements(step: dict) -> List[str]:
         for idx in indices:
             if 0 <= idx < len(options) - 1:
                 reqs.append(options[idx])
-    except:
+    except (ValueError, IndexError):
         pass
     
     return reqs

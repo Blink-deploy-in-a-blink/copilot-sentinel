@@ -23,6 +23,7 @@ from wrapper.commands.snapshot import cmd_snapshot
 from wrapper.commands.diff_baseline import cmd_diff_baseline
 from wrapper.commands.plan import cmd_plan_init, cmd_plan_status, cmd_plan_show
 from wrapper.commands.test import cmd_test
+from wrapper.commands.status import cmd_status
 
 
 def get_version():
@@ -30,14 +31,14 @@ def get_version():
     try:
         version_file = Path(__file__).parent.parent / "VERSION"
         return version_file.read_text(encoding='utf-8').strip()
-    except:
+    except (OSError, IOError):
         return "unknown"
 
 
 def main():
     parser = argparse.ArgumentParser(
         prog="wrapper",
-        description="AI-assisted development with architectural guardrails"
+        description="Build production-ready applications with AI-assisted development and architectural guardrails"
     )
     parser.add_argument(
         '--version', '-v',
@@ -54,6 +55,10 @@ def main():
         help="Interactive guided setup with LLM assistance"
     )
     init_parser.set_defaults(func=cmd_init)
+
+    # status command
+    status_parser = subparsers.add_parser("status", help="Show current workflow status and next action")
+    status_parser.set_defaults(func=cmd_status)
 
     # propose command
     propose_parser = subparsers.add_parser("propose", help="Propose next step.yaml")

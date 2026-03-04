@@ -13,8 +13,10 @@ from wrapper.core.files import (
     save_deviations,
     save_implementation_plan,
     add_done_step,
+    strip_markdown_fences,
 )
 from wrapper.core.paths import get_file_path, STEP_YAML_FILE
+from wrapper.core.cli_helpers import ask_yes_no, ask_text
 
 
 def update_deviation_resolutions(step_id: str, step_goal: str) -> int:
@@ -72,13 +74,9 @@ Output now (ONLY the JSON array, nothing else):"""
         
         # Parse JSON response
         import json
-        response = response.strip()
         
         # Clean up if wrapped in code fences
-        if response.startswith("```"):
-            lines = response.split("\n")
-            response = "\n".join(line for line in lines if not line.startswith("```"))
-            response = response.strip()
+        response = strip_markdown_fences(response)
         
         resolved_ids = json.loads(response)
         
@@ -153,8 +151,7 @@ def cmd_accept(args) -> bool:
     done_ids = [s["step_id"] for s in state.get("done_steps", [])]
     if step_id in done_ids:
         print(f"Warning: Step '{step_id}' already accepted.")
-        response = input("Accept again? [y/N]: ").strip().lower()
-        if response != 'y':
+        if not ask_yes_no("Accept again?", default=False):
             print("Aborted.")
             return False
     
@@ -188,11 +185,10 @@ def cmd_accept(args) -> bool:
         files_changed = list(get_changed_files())
         
         # Ask for implementation notes
-        print()
-        print("📝 Implementation Notes (optional)")
-        print("   Add any comments about this implementation:")
-        print("   (Press Enter to skip, or type notes and press Enter)")
-        implementation_notes = input("   > ").strip()
+        implementation_notes = ask_text(
+            "📝 Implementation Notes (optional)\n   Add any comments about this implementation:",
+            optional=True
+        )
         
         updated = mark_step_complete_in_plan(
             plan, 

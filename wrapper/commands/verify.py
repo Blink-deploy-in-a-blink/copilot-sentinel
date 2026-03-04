@@ -3,6 +3,7 @@ wrapper verify - Verify git diff against step constraints.
 """
 
 import re
+from datetime import datetime
 from typing import List, Tuple, Optional
 
 from wrapper.core.files import (
@@ -17,6 +18,8 @@ from wrapper.core.files import (
     save_state,
     save_baseline_snapshot,
     save_deviations,
+    normalize_forbidden_item,
+    strip_markdown_fences,
 )
 from wrapper.core.paths import get_file_path, STEP_YAML_FILE, COPILOT_OUTPUT_FILE, BASELINE_SNAPSHOT_FILE
 from wrapper.core.git import get_diff, get_changed_files, get_new_directories, is_git_repo
@@ -82,16 +85,6 @@ def check_new_directories(
         result.add_warning(
             f"New directories created: {', '.join(sorted(new_dirs))}"
         )
-
-
-def normalize_forbidden_item(item) -> str:
-    """Convert forbidden item to string, handling both string and dict formats."""
-    if isinstance(item, str):
-        return item
-    if isinstance(item, dict):
-        # Handle format like {example: "description"}
-        return str(list(item.values())[0]) if item else ""
-    return str(item)
 
 
 def check_forbidden_patterns(
@@ -526,14 +519,7 @@ If repository matches architecture well, return: deviations: []
         response = llm.generate(prompt, "verifier")
         
         # Clean up response
-        response = response.strip()
-        if response.startswith("```"):
-            lines = response.split("\n")
-            if lines[0].startswith("```"):
-                lines = lines[1:]
-            if lines and lines[-1].startswith("```"):
-                lines = lines[:-1]
-            response = "\n".join(lines)
+        response = strip_markdown_fences(response)
         
         # Parse YAML
         import yaml
@@ -738,7 +724,7 @@ def cmd_verify(args) -> bool:
         state = load_state()
         state["last_verify_status"] = "PASS"
         state["last_verify_step"] = step.get("step_id")
-        state["last_verify_timestamp"] = __import__("datetime").datetime.now().isoformat()
+        state["last_verify_timestamp"] = datetime.now().isoformat()
         save_state(state)
         
         print("\nNext steps:")
@@ -761,7 +747,7 @@ def cmd_verify(args) -> bool:
         state = load_state()
         state["last_verify_status"] = "FAIL"
         state["last_verify_step"] = step.get("step_id")
-        state["last_verify_timestamp"] = __import__("datetime").datetime.now().isoformat()
+        state["last_verify_timestamp"] = datetime.now().isoformat()
         save_state(state)
         
         # Generate repair prompt

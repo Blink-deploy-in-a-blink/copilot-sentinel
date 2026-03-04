@@ -10,6 +10,8 @@ from wrapper.core.files import (
     save_copilot_prompt,
     save_copilot_output,
     save_verify_md,
+    normalize_forbidden_item,
+    strip_markdown_fences,
 )
 from wrapper.core.paths import get_file_path, STEP_YAML_FILE, ARCHITECTURE_FILE, REPO_YAML_FILE, COPILOT_OUTPUT_FILE
 from wrapper.core.llm import get_llm_client
@@ -38,16 +40,6 @@ def check_required_files() -> bool:
         return False
     
     return True
-
-
-def normalize_forbidden_item(item) -> str:
-    """Convert forbidden item to string, handling both string and dict formats."""
-    if isinstance(item, str):
-        return item
-    if isinstance(item, dict):
-        # Handle format like {example: "description"}
-        return str(list(item.values())[0]) if item else ""
-    return str(item)
 
 
 def build_requirements_section(requirements: dict) -> str:
@@ -183,7 +175,7 @@ This is the [REPO_NAME] repo.
 
 RULES (NON-NEGOTIABLE):
 - You may ONLY {("read and analyze" if step.get("type") == "verification" else "modify")} the files listed below
-- You may NOT refactor, move files, or add structure
+- You may NOT modify files outside the allowed list or add unexpected structure
 {"- You must analyze and report findings, NOT create files" if step.get("type") == "verification" else "- You must implement the changes described in TASK"}
 - DO NOT create documentation files (output analysis in your response text)
 [Add any other critical rules]
@@ -328,14 +320,7 @@ def cmd_compile(args) -> bool:
         return False
     
     # Clean up - remove markdown fences if present
-    copilot_prompt = copilot_prompt.strip()
-    if copilot_prompt.startswith("```"):
-        lines = copilot_prompt.split("\n")
-        if lines[0].startswith("```"):
-            lines = lines[1:]
-        if lines and lines[-1].startswith("```"):
-            lines = lines[:-1]
-        copilot_prompt = "\n".join(lines)
+    copilot_prompt = strip_markdown_fences(copilot_prompt)
     
     # Generate verify.md checklist
     verify_content = build_verify_checklist(step, repo_yaml)

@@ -20,6 +20,10 @@ from wrapper.core.paths import (
     BASELINE_SNAPSHOT_FILE,
     DEVIATIONS_FILE,
     COPILOT_OUTPUT_FILE,
+    COPILOT_PROMPT_FILE,
+    VERIFY_FILE,
+    REPAIR_PROMPT_FILE,
+    DIFF_FILE,
     IMPLEMENTATION_PLAN_FILE,
     PLANNING_SESSION_FILE,
 )
@@ -130,22 +134,22 @@ def save_step_yaml(step: dict) -> None:
 
 def save_copilot_prompt(content: str) -> None:
     """Save copilot_prompt.txt."""
-    save_text_file(get_file_path("copilot_prompt.txt"), content)
+    save_text_file(get_file_path(COPILOT_PROMPT_FILE), content)
 
 
 def save_verify_md(content: str) -> None:
     """Save verify.md."""
-    save_text_file(get_file_path("verify.md"), content)
+    save_text_file(get_file_path(VERIFY_FILE), content)
 
 
 def save_repair_prompt(content: str) -> None:
     """Save repair_prompt.txt."""
-    save_text_file(get_file_path("repair_prompt.txt"), content)
+    save_text_file(get_file_path(REPAIR_PROMPT_FILE), content)
 
 
 def save_diff(content: str) -> None:
     """Save diff.txt."""
-    save_text_file(get_file_path("diff.txt"), content)
+    save_text_file(get_file_path(DIFF_FILE), content)
 
 
 def add_done_step(step_id: str, result: str) -> None:
@@ -212,3 +216,26 @@ def load_planning_session() -> Optional[dict]:
 def save_planning_session(session: dict) -> None:
     """Save planning_session.json."""
     save_json_file(get_file_path(PLANNING_SESSION_FILE), session)
+
+
+def normalize_forbidden_item(item) -> str:
+    """Convert forbidden item to string, handling both string and dict formats."""
+    if isinstance(item, str):
+        return item
+    if isinstance(item, dict):
+        # Handle format like {example: "description"}
+        return str(list(item.values())[0]) if item else ""
+    return str(item)
+
+
+def strip_markdown_fences(text: str) -> str:
+    """Remove markdown code fences from LLM response text."""
+    text = text.strip()
+    if text.startswith("```"):
+        lines = text.split("\n")
+        if lines[0].startswith("```"):
+            lines = lines[1:]
+        if lines and lines[-1].startswith("```"):
+            lines = lines[:-1]
+        text = "\n".join(lines)
+    return text.strip()
