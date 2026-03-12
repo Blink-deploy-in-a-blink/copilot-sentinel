@@ -15,7 +15,7 @@ from wrapper.core.files import (
     add_done_step,
     strip_markdown_fences,
 )
-from wrapper.core.paths import get_file_path, STEP_YAML_FILE
+from wrapper.core.paths import STEP_YAML_FILE
 from wrapper.core.cli_helpers import ask_yes_no, ask_text
 
 

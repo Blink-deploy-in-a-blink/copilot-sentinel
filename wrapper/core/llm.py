@@ -207,7 +207,7 @@ class AnthropicClient(LLMClient):
             raise RuntimeError(f"Network error: {e.reason}")
 
 
-def _validate_api_key(key: str) -> bool:
+def _validate_api_key(key: Optional[str]) -> bool:
     """Check if an API key looks valid (non-empty, non-placeholder)."""
     if not key or not key.strip():
         return False
