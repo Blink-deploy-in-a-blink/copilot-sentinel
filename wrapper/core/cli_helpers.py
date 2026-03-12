@@ -37,7 +37,10 @@ def ask_choice(question: str, options: List[str], allow_back: bool = False) -> i
                 return idx
             
             print(f"Invalid choice. Please enter 1-{len(options)}")
-        except (ValueError, KeyboardInterrupt):
+        except KeyboardInterrupt:
+            print("\nAborted.")
+            raise
+        except ValueError:
             print("Please enter a number.")
 
 

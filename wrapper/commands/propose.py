@@ -12,9 +12,11 @@ from wrapper.core.files import (
     load_deviations,
     load_implementation_plan,
     save_step_yaml,
+    strip_markdown_fences,
 )
 from wrapper.core.paths import get_file_path, STEP_YAML_FILE, ARCHITECTURE_FILE, REPO_YAML_FILE
 from wrapper.core.llm import get_llm_client
+from wrapper.core.cli_helpers import ask_yes_no
 
 
 def get_next_step_from_plan(plan: dict, state: dict) -> dict | None:
@@ -207,7 +209,7 @@ YOU MUST:
 2. Propose a step that says "BLOCKED - waiting for {list(blocked_deps.keys())[0]}"
 3. Output clear message telling user to fix the blocking repo first
 
-DO NOT propose any implementation or refactoring steps.
+DO NOT propose any implementation steps while blocked.
 ONLY propose a "blocked" verification step that documents the blocker.
 """
     
@@ -335,8 +337,8 @@ STEP PROPOSAL RULES (STRICT):
 CONSERVATIVE STEP PREFERENCE ORDER:
 1. Verification (check current state matches architecture) - MAX 2 TOTAL
 2. Cleanup (remove violations, fix existing issues) - PREFERRED after verification
-3. Refactor (improve structure without new features)
-4. Implementation (new features - ONLY if 1-3 not needed)
+3. Implementation (build new components or improve existing structure)
+4. Advanced features (complex features - ONLY if 1-3 not needed)
 
 CRITICAL REMINDERS:
 - Deviations are already documented in .wrapper/deviations.yaml
@@ -388,8 +390,7 @@ def cmd_propose(args) -> bool:
         if existing_step:
             print(f"Warning: {STEP_YAML_FILE} already exists.")
             print(f"Current step: {existing_step.get('step_id', 'unknown')}")
-            response = input("Overwrite? [y/N]: ").strip().lower()
-            if response != 'y':
+            if not ask_yes_no("Overwrite?", default=False):
                 print("Aborted.")
                 return False
         
@@ -409,8 +410,7 @@ def cmd_propose(args) -> bool:
     if existing_step:
         print(f"Warning: {STEP_YAML_FILE} already exists.")
         print(f"Current step: {existing_step.get('step_id', 'unknown')}")
-        response = input("Overwrite? [y/N]: ").strip().lower()
-        if response != 'y':
+        if not ask_yes_no("Overwrite?", default=False):
             print("Aborted.")
             return False
     
@@ -439,15 +439,7 @@ def cmd_propose(args) -> bool:
         return False
     
     # Clean up response - remove any markdown fences
-    response = response.strip()
-    if response.startswith("```"):
-        lines = response.split("\n")
-        # Remove first and last lines if they're fence markers
-        if lines[0].startswith("```"):
-            lines = lines[1:]
-        if lines and lines[-1].startswith("```"):
-            lines = lines[:-1]
-        response = "\n".join(lines)
+    response = strip_markdown_fences(response)
     
     # Validate it's valid YAML
     import yaml

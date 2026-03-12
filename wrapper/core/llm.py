@@ -207,6 +207,14 @@ class AnthropicClient(LLMClient):
             raise RuntimeError(f"Network error: {e.reason}")
 
 
+def _validate_api_key(key: Optional[str]) -> bool:
+    """Check if an API key looks valid (non-empty, non-placeholder)."""
+    if not key or not key.strip():
+        return False
+    placeholder_values = {"your-key-here", "sk-xxx", "your_api_key"}
+    return key.strip() not in placeholder_values
+
+
 def get_llm_client() -> LLMClient:
     """
     Get the configured LLM client.
@@ -229,12 +237,17 @@ def get_llm_client() -> LLMClient:
     anthropic_key = os.environ.get("ANTHROPIC_API_KEY")
     
     # Fall back to config file
-    if not deepseek_key:
+    if not _validate_api_key(deepseek_key):
         deepseek_key = config.get("deepseek_api_key")
-    if not openai_key:
+    if not _validate_api_key(openai_key):
         openai_key = config.get("openai_api_key")
-    if not anthropic_key:
+    if not _validate_api_key(anthropic_key):
         anthropic_key = config.get("anthropic_api_key")
+    
+    # Validate keys
+    deepseek_key = deepseek_key if _validate_api_key(deepseek_key) else None
+    openai_key = openai_key if _validate_api_key(openai_key) else None
+    anthropic_key = anthropic_key if _validate_api_key(anthropic_key) else None
     
     # Determine which provider to use
     provider = os.environ.get("LLM_PROVIDER") or config.get("llm_provider", "deepseek")
